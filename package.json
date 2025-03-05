@@ -41,7 +41,8 @@
     "react-native-webview": "13.12.5",
     "expo-secure-store": "~14.0.1",
     "expo-local-authentication": "~15.0.2",
-    "expo-image-picker": "~16.0.6"
+    "expo-image-picker": "~16.0.6",
+    "expo-checkbox": "~4.0.1"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",

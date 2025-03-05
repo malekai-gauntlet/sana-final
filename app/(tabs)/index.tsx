@@ -1,26 +1,30 @@
-import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useState } from 'react';
+import { router } from 'expo-router';
+import { careRequestService, type CareRequestType } from '../services/CareRequestService';
+import { ConsentModal } from '../components/ConsentModal';
 
 // Types
 interface CareOption {
   id: string;
   title: string;
   icon: keyof typeof Ionicons.glyphMap;
+  type: CareRequestType;
 }
 
 // Care options data
 const CARE_OPTIONS: CareOption[] = [
-  { id: '1', title: 'I feel sick', icon: 'medical-outline' },
-  { id: '2', title: 'I\'d like an Annual Health Check-Up', icon: 'fitness-outline' },
-  { id: '3', title: 'I have an injury', icon: 'bandage-outline' },
-  { id: '4', title: 'I have a chronic health concern', icon: 'pulse-outline' },
-  { id: '5', title: 'I have a mental health concern', icon: 'heart-outline' },
-  { id: '6', title: 'I need a referral to a medical specialist', icon: 'people-outline' },
-  { id: '7', title: 'I need a prescription refill', icon: 'medical-outline' },
-  { id: '8', title: 'I need to plan an X-ray, ultrasound, or other imaging', icon: 'scan-outline' },
-  { id: '9', title: 'I need to plan surgery', icon: 'cut-outline' },
-  { id: '10', title: 'It\'s something else', icon: 'help-circle-outline' },
+  { id: '1', title: 'I feel sick', icon: 'medical-outline', type: 'sick' },
+  { id: '2', title: 'I\'d like an Annual Health Check-Up', icon: 'fitness-outline', type: 'checkup' },
+  { id: '3', title: 'I have an injury', icon: 'bandage-outline', type: 'injury' },
+  { id: '4', title: 'I have a chronic health concern', icon: 'pulse-outline', type: 'chronic' },
+  { id: '5', title: 'I have a mental health concern', icon: 'heart-outline', type: 'mental_health' },
+  { id: '6', title: 'I need a referral to a medical specialist', icon: 'people-outline', type: 'specialist_referral' },
+  { id: '7', title: 'I need a prescription refill', icon: 'medical-outline', type: 'prescription_refill' },
+  { id: '8', title: 'I need to plan an X-ray, ultrasound, or other imaging', icon: 'scan-outline', type: 'imaging' },
+  { id: '9', title: 'I need to plan surgery', icon: 'cut-outline', type: 'surgery' },
+  { id: '10', title: 'It\'s something else', icon: 'help-circle-outline', type: 'other' },
 ];
 
 // Search Bar Component
@@ -44,15 +48,44 @@ const WelcomeSection = () => (
 );
 
 // Care Option Component
-const CareOption = ({ option }: { option: CareOption }) => (
-  <TouchableOpacity style={styles.careOptionCard}>
-    <View style={styles.careOptionContent}>
-      <Ionicons name={option.icon} size={24} color="#007AFF" style={styles.careOptionIcon} />
-      <Text style={styles.careOptionTitle}>{option.title}</Text>
-      <Ionicons name="chevron-forward" size={20} color="#8E8E93" />
-    </View>
-  </TouchableOpacity>
-);
+const CareOption = ({ option }: { option: CareOption }) => {
+  const [showConsent, setShowConsent] = useState(false);
+
+  const handlePress = () => {
+    setShowConsent(true);
+  };
+
+  const handleConsentSubmit = async () => {
+    try {
+      const careRequest = await careRequestService.createCareRequest(option.type);
+      if (careRequest) {
+        setShowConsent(false);
+        router.push(`/(chat)/${careRequest.id}`);
+      }
+    } catch (error) {
+      console.error('Failed to create care request:', error);
+      Alert.alert('Error', 'Failed to create care request. Please try again.');
+    }
+  };
+
+  return (
+    <>
+      <TouchableOpacity style={styles.careOptionCard} onPress={handlePress}>
+        <View style={styles.careOptionContent}>
+          <Ionicons name={option.icon} size={24} color="#007AFF" style={styles.careOptionIcon} />
+          <Text style={styles.careOptionTitle}>{option.title}</Text>
+          <Ionicons name="chevron-forward" size={20} color="#8E8E93" />
+        </View>
+      </TouchableOpacity>
+
+      <ConsentModal
+        visible={showConsent}
+        onClose={() => setShowConsent(false)}
+        onSubmit={handleConsentSubmit}
+      />
+    </>
+  );
+};
 
 // Get Care Section Component
 const GetCareSection = () => {
