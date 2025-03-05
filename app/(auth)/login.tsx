@@ -96,7 +96,9 @@ export default function LoginScreen() {
     try {
       const success = await authService.login(email, password);
       if (success) {
-        // If biometric is available but not enabled, ask user to enable it
+        // Add this line to verify token
+        await authService.debugToken();
+        
         if (biometricAvailable && !biometricEnabled) {
           Alert.alert(
             'Enable Face ID',

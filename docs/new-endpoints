@@ -1,0 +1,19 @@
+Care Requests
+POST /patient_api/care_requests → create
+GET /patient_api/care_requests → index
+GET /patient_api/care_requests/:id → show
+POST /patient_api/care_requests/:care_request_id/mark_read → mark_read
+POST /patient_api/care_requests/:care_request_id/stacks → create (for stacks)
+
+Question Sets
+PATCH /patient_api/question_sets/:id → update
+
+Attachments
+GET /patient_api/attachments/:id → show
+
+Referrals
+POST /patient_api/referrals/:referral_id/messages → create (for referral messages)
+GET /patient_api/referrals/:referral_id/messages → index (for referral messages)
+
+Referral Messages
+POST /patient_api/referral_messages/:referral_message_id/mark_read → mark_read

@@ -1,19 +1,38 @@
-import { View, Text, StyleSheet, TextInput, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
 import { useState } from 'react';
 import { router } from 'expo-router';
+import { authService } from '../services/AuthService';
 
 export default function SignupScreen() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleSignIn = () => {
     router.back();
   };
 
-  const handleCreateAccount = () => {
-    // TODO: Add actual signup logic
-    router.replace('/(tabs)');
+  const handleCreateAccount = async () => {
+    if (!name || !email || !password) {
+      Alert.alert('Error', 'Please fill in all fields');
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const success = await authService.signup(name, email, password);
+      if (success) {
+        router.replace('/(tabs)');
+      } else {
+        Alert.alert('Error', 'Failed to create account. Please try again.');
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Something went wrong. Please try again.');
+      console.error('Signup error:', error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -48,8 +67,16 @@ export default function SignupScreen() {
             placeholder="Create a password"
           />
 
-          <TouchableOpacity style={styles.button} onPress={handleCreateAccount}>
-            <Text style={styles.buttonText}>Create Account</Text>
+          <TouchableOpacity 
+            style={[styles.button, isLoading && styles.buttonDisabled]} 
+            onPress={handleCreateAccount}
+            disabled={isLoading}
+          >
+            {isLoading ? (
+              <ActivityIndicator color="#FFFFFF" />
+            ) : (
+              <Text style={styles.buttonText}>Create Account</Text>
+            )}
           </TouchableOpacity>
         </View>
       </View>
@@ -95,6 +122,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: 8,
     marginBottom: 32,
+  },
+  buttonDisabled: {
+    backgroundColor: '#E1E1E1',
   },
   buttonText: {
     color: '#fff',

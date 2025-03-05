@@ -1,9 +1,13 @@
 import * as SecureStore from 'expo-secure-store';
 import * as LocalAuthentication from 'expo-local-authentication';
+import { Alert } from 'react-native';
 
 interface LoginResponse {
-  access_token: string;
-  expires_at: number;
+  token: string;
+  user: {
+    id: number;
+    email: string;
+  };
 }
 
 // Mock data for development
@@ -11,7 +15,7 @@ const MOCK_TOKEN = 'mock_primary_token_12345';
 const MOCK_EXPIRY = Date.now() + 24 * 60 * 60 * 1000; // 24 hours from now
 
 class AuthService {
-  private baseUrl = 'http://localhost:3000/member_portal/api'; // Keep for future use
+  private baseUrl = 'http://localhost/member_portal/api'; // Remove the :3000
   private static readonly PRIMARY_TOKEN_KEY = 'primary_token';
   private static readonly BIOMETRIC_ENABLED_KEY = 'biometric_enabled';
   private static readonly STORED_EMAIL_KEY = 'stored_email';
@@ -161,19 +165,33 @@ class AuthService {
 
   async login(email: string, password: string): Promise<boolean> {
     try {
-      // Mock successful login
-      if (email && password) {
-        const mockResponse: LoginResponse = {
-          access_token: MOCK_TOKEN,
-          expires_at: MOCK_EXPIRY
-        };
-        
-        await SecureStore.setItemAsync(AuthService.PRIMARY_TOKEN_KEY, mockResponse.access_token);
-        return true;
+      const url = `${this.baseUrl}/session`;
+      console.log('🔐 Login Request:', { url, email });
+      
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, password }),
+      });
+
+      // Log response details
+      console.log('🔐 Login Response Status:', response.status);
+      const responseText = await response.text();
+      console.log('🔐 Login Response:', responseText);
+
+      if (!response.ok) {
+        console.log('❌ Login failed:', response.status, responseText);
+        return false;
       }
-      return false;
+
+      const data: LoginResponse = JSON.parse(responseText);
+      await SecureStore.setItemAsync(AuthService.PRIMARY_TOKEN_KEY, data.token);
+      console.log('✅ Login successful, token stored');
+      return true;
     } catch (error) {
-      console.error('Login error:', error);
+      console.error('❌ Login error:', error);
       return false;
     }
   }
@@ -195,6 +213,39 @@ class AuthService {
   async isAuthenticated(): Promise<boolean> {
     const token = await this.getPrimaryToken();
     return !!token;
+  }
+
+  // Add signup method
+  async signup(name: string, email: string, password: string): Promise<boolean> {
+    try {
+      const response = await fetch(`${this.baseUrl}/users`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ name, email, password }),
+      });
+
+      if (!response.ok) {
+        return false;
+      }
+
+      // After successful signup, log the user in
+      return this.login(email, password);
+    } catch (error) {
+      console.error('Signup error:', error);
+      return false;
+    }
+  }
+
+  // Add this debug method
+  async debugToken(): Promise<void> {
+    try {
+      const token = await SecureStore.getItemAsync(AuthService.PRIMARY_TOKEN_KEY);
+      console.log('Stored token:', token);
+    } catch (error) {
+      console.error('Error checking token:', error);
+    }
   }
 }
 
