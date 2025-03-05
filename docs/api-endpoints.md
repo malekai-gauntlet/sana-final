@@ -77,3 +77,20 @@ Once you have the token, you'll make direct calls to these endpoints:
 |--------|----------|-------------|
 | GET | `/patient_api/consent-forms` | Get consent forms |
 | POST | `/patient_api/consent-forms/{id}/signatures` | Submit signed consent 
+
+
+
+
+def get_token
+  create_patient_record! unless current_sana_care_patient.present?
+  
+  if current_sana_care_patient.present?
+    tokens = care_platform_tokens
+    render json: { 
+      access_token: tokens[:access_token],
+      expires_at: Time.now.to_i + 15.minutes.to_i
+    }
+  else
+    render json: { error: 'Could not create patient record' }, status: :unprocessable_entity
+  end
+end
