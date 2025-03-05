@@ -1,31 +1,52 @@
-import { View, Text, StyleSheet, TextInput, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
 import { useState } from 'react';
 import { router } from 'expo-router';
+import { authService } from '../services/AuthService';
 
 export default function LoginScreen() {
-  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleSignup = () => {
     router.push('/(auth)/signup');
   };
 
-  const handleSignIn = () => {
-    // TODO: Add actual authentication logic
-    router.replace('/(tabs)');
+  const handleSignIn = async () => {
+    if (!email || !password) {
+      Alert.alert('Error', 'Please enter both email and password');
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const success = await authService.login(email, password);
+      if (success) {
+        router.replace('/(tabs)');
+      } else {
+        Alert.alert('Error', 'Invalid email or password');
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Something went wrong. Please try again.');
+      console.error('Login error:', error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
     <View style={styles.container}>
       <View style={styles.contentContainer}>
         <View style={styles.formContainer}>
-          <Text style={styles.label}>Username</Text>
+          <Text style={styles.label}>Email</Text>
           <TextInput
             style={styles.input}
-            value={username}
-            onChangeText={setUsername}
+            value={email}
+            onChangeText={setEmail}
             autoCapitalize="none"
-            placeholder="Enter your username"
+            keyboardType="email-address"
+            autoComplete="email"
+            placeholder="Enter your email"
           />
 
           <Text style={styles.label}>Password</Text>
@@ -35,16 +56,25 @@ export default function LoginScreen() {
             onChangeText={setPassword}
             secureTextEntry
             autoCapitalize="none"
+            autoComplete="password"
             placeholder="Enter your password"
           />
 
-          <TouchableOpacity style={styles.button} onPress={handleSignIn}>
-            <Text style={styles.buttonText}>Sign In</Text>
+          <TouchableOpacity 
+            style={[styles.button, isLoading && styles.buttonDisabled]} 
+            onPress={handleSignIn}
+            disabled={isLoading}
+          >
+            {isLoading ? (
+              <ActivityIndicator color="#FFFFFF" />
+            ) : (
+              <Text style={styles.buttonText}>Sign In</Text>
+            )}
           </TouchableOpacity>
 
           <View style={styles.forgotLinksContainer}>
             <TouchableOpacity style={styles.linkContainer}>
-              <Text style={styles.link}>Forgot username?</Text>
+              <Text style={styles.link}>Forgot email?</Text>
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.linkContainer}>
@@ -89,12 +119,15 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
   },
   button: {
-    backgroundColor: '#5A2ED2',
+    backgroundColor: '#007AFF',
     padding: 16,
     borderRadius: 12,
     alignItems: 'center',
     marginTop: 8,
     marginBottom: 32,
+  },
+  buttonDisabled: {
+    opacity: 0.7,
   },
   buttonText: {
     color: '#fff',

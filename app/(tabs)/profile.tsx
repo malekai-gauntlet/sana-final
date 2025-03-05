@@ -1,5 +1,7 @@
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { router } from 'expo-router';
+import { authService } from '../services/AuthService';
 
 // Profile Header Component
 const ProfileHeader = () => (
@@ -88,6 +90,11 @@ const IntegrationCard = ({
 );
 
 export default function ProfileScreen() {
+  const handleSignOut = async () => {
+    await authService.logout();
+    router.replace('/(auth)/login');
+  };
+
   return (
     <ScrollView style={styles.container}>
       <ProfileHeader />
@@ -165,7 +172,7 @@ export default function ProfileScreen() {
         />
       </View>
 
-      <TouchableOpacity style={styles.signOutButton}>
+      <TouchableOpacity style={styles.signOutButton} onPress={handleSignOut}>
         <Text style={styles.signOutText}>Sign Out</Text>
       </TouchableOpacity>
     </ScrollView>

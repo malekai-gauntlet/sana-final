@@ -1,5 +1,6 @@
 import { Alert } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
+import { authService } from './AuthService';
 
 interface TokenResponse {
   access_token: string;
@@ -29,77 +30,182 @@ export interface Conversation {
   unread: boolean;
 }
 
-class CarePlatformClient {
-  private baseUrl = 'https://api.sanabenefits.com/patient_api';  // Production URL - we'll need to make this configurable
-  private memberPortalUrl = 'https://api.sanabenefits.com/member_portal/api';
+// Mock data for development
+const MOCK_CONVERSATIONS: Conversation[] = [
+  {
+    id: '1',
+    provider: {
+      id: 'doc1',
+      name: 'Dr. Sarah Johnson',
+      role: 'Primary Care Physician'
+    },
+    lastMessage: {
+      id: '123',
+      text: 'How long have you been experiencing these headaches?',
+      author: {
+        id: 'doc1',
+        type: 'provider',
+        name: 'Dr. Sarah Johnson'
+      },
+      timestamp: new Date(Date.now() - 22 * 60 * 60 * 1000).toISOString()
+    },
+    unread: true
+  },
+  {
+    id: '2',
+    provider: {
+      id: 'doc2',
+      name: 'Dr. Michael Chen',
+      role: 'Dermatologist'
+    },
+    lastMessage: {
+      id: '456',
+      text: 'Your test results look normal. No need for concern.',
+      author: {
+        id: 'doc2',
+        type: 'provider',
+        name: 'Dr. Michael Chen'
+      },
+      timestamp: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString()
+    },
+    unread: false
+  },
+  {
+    id: '3',
+    provider: {
+      id: 'doc3',
+      name: 'Dr. Emily Martinez',
+      role: 'Nutritionist'
+    },
+    lastMessage: {
+      id: '789',
+      text: 'Here is your personalized meal plan for the next week.',
+      author: {
+        id: 'doc3',
+        type: 'provider',
+        name: 'Dr. Emily Martinez'
+      },
+      timestamp: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString()
+    },
+    unread: false
+  }
+];
 
-  private static readonly TOKEN_KEY = 'care_platform_token';
-  private static readonly TOKEN_EXPIRY_KEY = 'care_platform_token_expiry';
+const MOCK_MESSAGES: { [key: string]: Message[] } = {
+  '1': [
+    {
+      id: '1',
+      text: 'Hello! How can I help you today?',
+      author: {
+        id: 'doc1',
+        type: 'provider',
+        name: 'Dr. Sarah Johnson'
+      },
+      timestamp: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
+    },
+    {
+      id: '2',
+      text: 'I have been experiencing headaches',
+      author: {
+        id: 'patient1',
+        type: 'patient',
+        name: 'John Doe'
+      },
+      timestamp: new Date(Date.now() - 23 * 60 * 60 * 1000).toISOString()
+    },
+    {
+      id: '3',
+      text: 'How long have you been experiencing these headaches?',
+      author: {
+        id: 'doc1',
+        type: 'provider',
+        name: 'Dr. Sarah Johnson'
+      },
+      timestamp: new Date(Date.now() - 22 * 60 * 60 * 1000).toISOString()
+    }
+  ],
+  '2': [
+    {
+      id: '4',
+      text: 'I received your skin test results',
+      author: {
+        id: 'doc2',
+        type: 'provider',
+        name: 'Dr. Michael Chen'
+      },
+      timestamp: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString()
+    },
+    {
+      id: '5',
+      text: 'Your test results look normal. No need for concern.',
+      author: {
+        id: 'doc2',
+        type: 'provider',
+        name: 'Dr. Michael Chen'
+      },
+      timestamp: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString()
+    }
+  ],
+  '3': [
+    {
+      id: '6',
+      text: 'Here is your personalized meal plan for the next week.',
+      author: {
+        id: 'doc3',
+        type: 'provider',
+        name: 'Dr. Emily Martinez'
+      },
+      timestamp: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString()
+    }
+  ]
+};
+
+class CarePlatformClient {
+  private baseUrl = 'http://localhost:3000/patient_api';  // Keep for future use
+  private memberPortalUrl = 'http://localhost:3000/member_portal/api';
+
+  private static readonly CARE_TOKEN_KEY = 'care_platform_token';
+  private static readonly CARE_TOKEN_EXPIRY_KEY = 'care_platform_token_expiry';
 
   // Get all conversations (care requests) for the current user
   async getConversations(): Promise<Conversation[]> {
-    try {
-      const response = await fetch(`${this.baseUrl}/care_requests`, {
-        headers: {
-          'Authorization': `Bearer ${await this.getCareToken()}`,
-          'Content-Type': 'application/json',
-        }
-      });
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      
-      const data = await response.json();
-      return data;
-    } catch (error) {
-      console.error('Failed to fetch conversations:', error);
-      Alert.alert('Error', 'Failed to fetch conversations');
-      return [];
-    }
+    // Return mock conversations for now
+    return MOCK_CONVERSATIONS;
   }
 
   // Get messages for a specific conversation
   async getMessages(careRequestId: string): Promise<Message[]> {
-    try {
-      const response = await fetch(`${this.baseUrl}/conversations/${careRequestId}/messages`, {
-        headers: {
-          'Authorization': `Bearer ${await this.getCareToken()}`,
-          'Content-Type': 'application/json',
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
-      return data;
-    } catch (error) {
-      console.error('Failed to fetch messages:', error);
-      Alert.alert('Error', 'Failed to fetch messages');
-      return [];
-    }
+    // Return mock messages for the conversation
+    return MOCK_MESSAGES[careRequestId] || [];
   }
 
   // Send a new message in a conversation
   async sendMessage(careRequestId: string, text: string): Promise<Message | null> {
     try {
-      const response = await fetch(`${this.baseUrl}/conversations/${careRequestId}/messages`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${await this.getCareToken()}`,
-          'Content-Type': 'application/json',
+      const newMessage: Message = {
+        id: Date.now().toString(),
+        text,
+        author: {
+          id: 'patient1',
+          type: 'patient',
+          name: 'John Doe'
         },
-        body: JSON.stringify({ text }),
-      });
+        timestamp: new Date().toISOString()
+      };
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+      // Add to mock messages
+      if (!MOCK_MESSAGES[careRequestId]) {
+        MOCK_MESSAGES[careRequestId] = [];
+      }
+      MOCK_MESSAGES[careRequestId].push(newMessage);
+
+      // Update last message in conversation
+      const conversation = MOCK_CONVERSATIONS.find(c => c.id === careRequestId);
+      if (conversation) {
+        conversation.lastMessage = newMessage;
       }
 
-      const data = await response.json();
-      return data;
+      return newMessage;
     } catch (error) {
       console.error('Failed to send message:', error);
       Alert.alert('Error', 'Failed to send message');
@@ -109,48 +215,7 @@ class CarePlatformClient {
 
   // Get Care Platform token, refreshing if necessary
   private async getCareToken(): Promise<string> {
-    const token = await SecureStore.getItemAsync(CarePlatformClient.TOKEN_KEY);
-    const expiryStr = await SecureStore.getItemAsync(CarePlatformClient.TOKEN_EXPIRY_KEY);
-    const expiryTime = expiryStr ? parseInt(expiryStr, 10) : 0;
-
-    // If token exists and isn't expired, return it
-    if (token && expiryTime > Date.now()) {
-      return token;
-    }
-
-    // Otherwise, get a new token
-    try {
-      const response = await fetch(`${this.memberPortalUrl}/care_requests/get_token`, {
-        headers: {
-          'Authorization': `Bearer ${await this.getPrimaryToken()}`,
-          'Content-Type': 'application/json',
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data: TokenResponse = await response.json();
-      
-      // Store the new token and expiry
-      await SecureStore.setItemAsync(CarePlatformClient.TOKEN_KEY, data.access_token);
-      await SecureStore.setItemAsync(CarePlatformClient.TOKEN_EXPIRY_KEY, data.expires_at.toString());
-
-      return data.access_token;
-    } catch (error) {
-      console.error('Failed to get care token:', error);
-      throw new Error('Failed to get care token');
-    }
-  }
-
-  // Get primary authentication token from secure storage
-  private async getPrimaryToken(): Promise<string> {
-    const token = await SecureStore.getItemAsync('primary_token');
-    if (!token) {
-      throw new Error('No primary token found - user may need to log in');
-    }
-    return token;
+    return 'mock_care_token_12345'; // Mock token for now
   }
 }
 

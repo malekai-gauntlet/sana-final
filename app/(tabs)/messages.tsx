@@ -1,21 +1,13 @@
-import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Pressable } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Pressable, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { carePlatformClient, type Conversation } from '../services/CarePlatformClient';
+import { router } from 'expo-router';
 
 // Types
 interface SortingOptionsProps {
   activeSort: string;
   onSortChange: (sort: string) => void;
-}
-
-interface Conversation {
-  id: string;
-  name: string;
-  role: string;
-  lastMessage: string;
-  timestamp: string;
-  unread: boolean;
-  online: boolean;
 }
 
 interface ConversationItemProps {
@@ -61,70 +53,26 @@ const SortingOptions = ({ activeSort, onSortChange }: SortingOptionsProps) => (
   </View>
 );
 
-// Placeholder data for conversations
-const CONVERSATIONS = [
-  {
-    id: '1',
-    name: 'Dr. Sarah Johnson',
-    role: 'Primary Care Physician',
-    lastMessage: 'Your test results look good. Let me know if you have any questions.',
-    timestamp: '2m ago',
-    unread: true,
-    online: true,
-  },
-  {
-    id: '2',
-    name: 'Dr. Michael Chen',
-    role: 'Cardiologist',
-    lastMessage: 'Please remember to take your medication as prescribed.',
-    timestamp: '1h ago',
-    unread: false,
-    online: false,
-  },
-  {
-    id: '3',
-    name: 'Nurse Williams',
-    role: 'Registered Nurse',
-    lastMessage: 'How are you feeling after the procedure?',
-    timestamp: '3h ago',
-    unread: true,
-    online: true,
-  },
-  {
-    id: '4',
-    name: 'Dr. Emily Rodriguez',
-    role: 'Dermatologist',
-    lastMessage: 'Your prescription has been sent to the pharmacy.',
-    timestamp: 'Yesterday',
-    unread: false,
-    online: false,
-  },
-  {
-    id: '5',
-    name: 'Dr. James Wilson',
-    role: 'Neurologist',
-    lastMessage: 'Let\'s schedule a follow-up appointment next month.',
-    timestamp: 'Yesterday',
-    unread: false,
-    online: false,
-  },
-];
-
 // Conversation list item component
 const ConversationItem = ({ conversation }: ConversationItemProps) => (
-  <TouchableOpacity style={styles.conversationItem}>
+  <TouchableOpacity 
+    style={styles.conversationItem}
+    onPress={() => router.push(`/(chat)/${conversation.id}`)}
+  >
     <View style={styles.avatarContainer}>
       <View style={styles.avatar}>
         <Ionicons name="person" size={24} color="#FFFFFF" />
       </View>
-      {conversation.online && <View style={styles.onlineIndicator} />}
+      {/* Online indicator removed as we don't have this in the API yet */}
     </View>
     <View style={styles.conversationContent}>
       <View style={styles.conversationHeader}>
-        <Text style={styles.conversationName}>{conversation.name}</Text>
-        <Text style={styles.conversationTime}>{conversation.timestamp}</Text>
+        <Text style={styles.conversationName}>{conversation.provider.name}</Text>
+        <Text style={styles.conversationTime}>
+          {conversation.lastMessage?.timestamp || 'No messages'}
+        </Text>
       </View>
-      <Text style={styles.conversationRole}>{conversation.role}</Text>
+      <Text style={styles.conversationRole}>{conversation.provider.role}</Text>
       <Text 
         style={[
           styles.conversationMessage,
@@ -132,7 +80,7 @@ const ConversationItem = ({ conversation }: ConversationItemProps) => (
         ]}
         numberOfLines={1}
       >
-        {conversation.lastMessage}
+        {conversation.lastMessage?.text || 'No messages yet'}
       </Text>
     </View>
   </TouchableOpacity>
@@ -140,15 +88,60 @@ const ConversationItem = ({ conversation }: ConversationItemProps) => (
 
 export default function MessagesScreen() {
   const [activeSort, setActiveSort] = useState('recent');
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    loadConversations();
+  }, []);
+
+  const loadConversations = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      const data = await carePlatformClient.getConversations();
+      setConversations(data);
+    } catch (err) {
+      setError('Failed to load conversations. Please try again.');
+      console.error('Error loading conversations:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <View style={styles.centerContainer}>
+        <ActivityIndicator size="large" color="#007AFF" />
+      </View>
+    );
+  }
+
+  if (error) {
+    return (
+      <View style={styles.centerContainer}>
+        <Text style={styles.errorText}>{error}</Text>
+        <TouchableOpacity style={styles.retryButton} onPress={loadConversations}>
+          <Text style={styles.retryButtonText}>Retry</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
       <SearchBar />
       <SortingOptions activeSort={activeSort} onSortChange={setActiveSort} />
       <ScrollView style={styles.conversationList}>
-        {CONVERSATIONS.map((conversation) => (
+        {conversations.map((conversation) => (
           <ConversationItem key={conversation.id} conversation={conversation} />
         ))}
+        {conversations.length === 0 && (
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyStateText}>No conversations yet</Text>
+          </View>
+        )}
       </ScrollView>
       <TouchableOpacity style={styles.newMessageButton}>
         <Ionicons name="create" size={24} color="#FFFFFF" />
@@ -161,6 +154,37 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F2F2F7',
+  },
+  centerContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#F2F2F7',
+  },
+  errorText: {
+    color: '#FF3B30',
+    textAlign: 'center',
+    marginBottom: 16,
+  },
+  retryButton: {
+    backgroundColor: '#007AFF',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 8,
+  },
+  retryButtonText: {
+    color: '#FFFFFF',
+    fontWeight: '600',
+  },
+  emptyState: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 32,
+  },
+  emptyStateText: {
+    color: '#8E8E93',
+    fontSize: 16,
   },
   searchContainer: {
     flexDirection: 'row',
@@ -220,17 +244,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#8E8E93',
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  onlineIndicator: {
-    position: 'absolute',
-    right: 0,
-    bottom: 0,
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    backgroundColor: '#34C759',
-    borderWidth: 2,
-    borderColor: '#FFFFFF',
   },
   conversationContent: {
     flex: 1,
