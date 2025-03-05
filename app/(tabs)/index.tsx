@@ -1,7 +1,29 @@
 import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useState } from 'react';
 
-// Placeholder component for the search bar
+// Types
+interface CareOption {
+  id: string;
+  title: string;
+  icon: keyof typeof Ionicons.glyphMap;
+}
+
+// Care options data
+const CARE_OPTIONS: CareOption[] = [
+  { id: '1', title: 'I feel sick', icon: 'medical-outline' },
+  { id: '2', title: 'I\'d like an Annual Health Check-Up', icon: 'fitness-outline' },
+  { id: '3', title: 'I have an injury', icon: 'bandage-outline' },
+  { id: '4', title: 'I have a chronic health concern', icon: 'pulse-outline' },
+  { id: '5', title: 'I have a mental health concern', icon: 'heart-outline' },
+  { id: '6', title: 'I need a referral to a medical specialist', icon: 'people-outline' },
+  { id: '7', title: 'I need a prescription refill', icon: 'medical-outline' },
+  { id: '8', title: 'I need to plan an X-ray, ultrasound, or other imaging', icon: 'scan-outline' },
+  { id: '9', title: 'I need to plan surgery', icon: 'cut-outline' },
+  { id: '10', title: 'It\'s something else', icon: 'help-circle-outline' },
+];
+
+// Search Bar Component
 const SearchBar = () => (
   <View style={styles.searchContainer}>
     <Ionicons name="search-outline" size={20} color="#8E8E93" />
@@ -13,7 +35,54 @@ const SearchBar = () => (
   </View>
 );
 
-// Placeholder component for health metrics
+// Welcome Section Component
+const WelcomeSection = () => (
+  <View style={styles.welcomeContainer}>
+    <Text style={styles.welcomeTitle}>How can we help?</Text>
+    <Text style={styles.welcomeSubtitle}>Tell a provider what you need.</Text>
+  </View>
+);
+
+// Care Option Component
+const CareOption = ({ option }: { option: CareOption }) => (
+  <TouchableOpacity style={styles.careOptionCard}>
+    <View style={styles.careOptionContent}>
+      <Ionicons name={option.icon} size={24} color="#007AFF" style={styles.careOptionIcon} />
+      <Text style={styles.careOptionTitle}>{option.title}</Text>
+      <Ionicons name="chevron-forward" size={20} color="#8E8E93" />
+    </View>
+  </TouchableOpacity>
+);
+
+// Get Care Section Component
+const GetCareSection = () => {
+  const [isExpanded, setIsExpanded] = useState(false);
+  const displayedOptions = isExpanded ? CARE_OPTIONS : CARE_OPTIONS.slice(0, 3);
+
+  return (
+    <View style={styles.getCareContainer}>
+      <Text style={styles.getCareTitle}>Get care now</Text>
+      {displayedOptions.map((option) => (
+        <CareOption key={option.id} option={option} />
+      ))}
+      <TouchableOpacity 
+        style={styles.showMoreButton}
+        onPress={() => setIsExpanded(!isExpanded)}
+      >
+        <Text style={styles.showMoreText}>
+          {isExpanded ? 'Show Less' : 'Show More Options'}
+        </Text>
+        <Ionicons 
+          name={isExpanded ? 'chevron-up' : 'chevron-down'} 
+          size={20} 
+          color="#007AFF" 
+        />
+      </TouchableOpacity>
+    </View>
+  );
+};
+
+// Health Metrics Component
 const HealthMetrics = () => (
   <View style={styles.sectionContainer}>
     <Text style={styles.sectionTitle}>Health Overview</Text>
@@ -131,6 +200,8 @@ export default function HomeScreen() {
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
       <SearchBar />
+      <WelcomeSection />
+      <GetCareSection />
       <HealthMetrics />
       <UpcomingAppointments />
       <RecentMessages />
@@ -158,6 +229,54 @@ const styles = StyleSheet.create({
     flex: 1,
     marginLeft: 8,
     fontSize: 16,
+  },
+  welcomeContainer: {
+    padding: 16,
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E5EA',
+  },
+  welcomeTitle: {
+    fontSize: 28,
+    fontWeight: '700',
+    color: '#000000',
+    marginBottom: 8,
+  },
+  welcomeSubtitle: {
+    fontSize: 17,
+    color: '#8E8E93',
+  },
+  getCareContainer: {
+    padding: 16,
+    backgroundColor: '#FFFFFF',
+    marginBottom: 20,
+  },
+  getCareTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#000000',
+    marginBottom: 16,
+  },
+  careOptionCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: '#E5E5EA',
+  },
+  careOptionContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+  },
+  careOptionIcon: {
+    marginRight: 12,
+  },
+  careOptionTitle: {
+    fontSize: 17,
+    color: '#000000',
+    flex: 1,
   },
   sectionContainer: {
     backgroundColor: '#FFFFFF',
@@ -284,5 +403,19 @@ const styles = StyleSheet.create({
     color: '#000000',
     marginTop: 8,
     textAlign: 'center',
+  },
+  showMoreButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    marginTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: '#E5E5EA',
+  },
+  showMoreText: {
+    color: '#007AFF',
+    fontSize: 16,
+    marginRight: 4,
   },
 }); 
