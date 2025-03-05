@@ -10,6 +10,11 @@ export default function LoginScreen() {
     router.push('/(auth)/signup');
   };
 
+  const handleSignIn = () => {
+    // TODO: Add actual authentication logic
+    router.replace('/(tabs)');
+  };
+
   return (
     <View style={styles.container}>
       <View style={styles.contentContainer}>
@@ -33,7 +38,7 @@ export default function LoginScreen() {
             placeholder="Enter your password"
           />
 
-          <TouchableOpacity style={styles.button}>
+          <TouchableOpacity style={styles.button} onPress={handleSignIn}>
             <Text style={styles.buttonText}>Sign In</Text>
           </TouchableOpacity>
 

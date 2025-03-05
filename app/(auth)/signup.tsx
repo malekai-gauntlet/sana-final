@@ -11,6 +11,11 @@ export default function SignupScreen() {
     router.back();
   };
 
+  const handleCreateAccount = () => {
+    // TODO: Add actual signup logic
+    router.replace('/(tabs)');
+  };
+
   return (
     <View style={styles.container}>
       <View style={styles.contentContainer}>
@@ -43,7 +48,7 @@ export default function SignupScreen() {
             placeholder="Create a password"
           />
 
-          <TouchableOpacity style={styles.button}>
+          <TouchableOpacity style={styles.button} onPress={handleCreateAccount}>
             <Text style={styles.buttonText}>Create Account</Text>
           </TouchableOpacity>
         </View>

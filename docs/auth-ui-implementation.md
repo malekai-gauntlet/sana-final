@@ -5,12 +5,8 @@
   ```
   app/
   ├── (auth)/             
-  │   ├── login.tsx      
-  │   ├── signup/        
-  │   │   ├── _layout.tsx   
-  │   │   ├── step1.tsx     
-  │   │   ├── step2.tsx     
-  │   │   └── step3.tsx     
+  │   ├── login.tsx      # ✓ Completed
+  │   ├── signup.tsx     # ✓ Completed
   │   ├── forgot-password.tsx
   │   └── reset-password.tsx
   ```
@@ -34,18 +30,30 @@
   - [x] "Forgot Password?" link
   - [x] "Create Account" link
   - [x] Apply Sana theme styles
+  - [x] Navigation to signup
   - [ ] Add form validation
   - [ ] Add error states
   - [ ] Add loading states
+  - [ ] Implement actual login functionality
   
-- [ ] Sign Up Screen (Priority 2)
-  - [ ] Basic info fields
-    - [ ] Name field
-    - [ ] Email field
-    - [ ] Password field
-  - [ ] Terms acceptance checkbox
-  - [ ] Create Account button
-  - [ ] Apply consistent styling
+- [x] Sign Up Screen (Priority 2)
+  - [x] Basic info fields
+    - [x] Name field
+    - [x] Email field
+    - [x] Password field
+  - [x] Create Account button
+  - [x] Apply consistent styling
+  - [x] Navigation back to login
+  - [ ] Add form validation
+  - [ ] Add error states
+  - [ ] Add loading states
+  - [ ] Implement actual signup functionality
+
+- [ ] Forgot Password Flow (Priority 3)
+  - [ ] Create forgot password screen
+  - [ ] Create reset password screen
+  - [ ] Implement email verification
+  - [ ] Add success/error states
 
 - [ ] Biometric Authentication (Priority 2)
   - [ ] Basic Setup
@@ -67,6 +75,11 @@
 - [x] Update index.tsx for auth flow
   - [x] Add auth state check
   - [x] Setup proper redirects
+- [x] Implement navigation between auth screens
+  - [x] Login to Signup
+  - [x] Signup to Login
+  - [ ] Login to Forgot Password
+  - [ ] Forgot Password to Reset Password
 
 ## 5. Testing & Validation
 - [ ] Test form submissions
@@ -80,6 +93,13 @@
   - [ ] Proper labels for inputs
   - [ ] Adequate touch targets
   - [ ] Readable text sizes
+
+## Next Priority Tasks:
+1. Implement Forgot Password screens (Priority 3)
+2. Add form validation to existing screens
+3. Implement actual authentication functionality
+4. Add loading and error states
+5. Add biometric authentication
 
 ## Notes
 - Keep implementation simple and minimal
