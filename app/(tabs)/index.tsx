@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { careRequestService, type CareRequestType } from '../services/CareRequestService';
+import { careRequestService, type CareRequestType, type CareRequest } from '../services/CareRequestService';
 import { ConsentModal } from '../components/ConsentModal';
 
 // Types
@@ -170,39 +170,86 @@ const UpcomingAppointments = () => (
   </View>
 );
 
-// Placeholder component for recent messages
-const RecentMessages = () => (
-  <View style={styles.sectionContainer}>
-    <View style={styles.sectionHeader}>
-      <Text style={styles.sectionTitle}>Recent Messages</Text>
-      <TouchableOpacity>
-        <Text style={styles.viewAllText}>View All</Text>
-      </TouchableOpacity>
-    </View>
-    <View style={styles.messagesList}>
-      <View style={styles.messageCard}>
-        <View style={styles.messageAvatar}>
-          <Ionicons name="person-circle-outline" size={40} color="#8E8E93" />
-        </View>
-        <View style={styles.messageInfo}>
-          <Text style={styles.messageSender}>Dr. Sarah Johnson</Text>
-          <Text style={styles.messagePreview}>Your test results are ready...</Text>
-          <Text style={styles.messageTime}>2h ago</Text>
-        </View>
+// Replace RecentMessages component with CareRequests
+const CareRequests = () => {
+  const [careRequests, setCareRequests] = useState<CareRequest[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  const handleFetchRequests = async () => {
+    console.log('🔄 Starting fetch request operation...');
+    setLoading(true);
+    
+    try {
+      const requests = await careRequestService.getCareRequests();
+      if (Array.isArray(requests)) {
+        setCareRequests(requests);
+      }
+    } catch (error) {
+      console.error('❌ Error in handleFetchRequests:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const formatTime = (dateString: string) => {
+    try {
+      const date = new Date(dateString);
+      return `Today at ${date.toLocaleTimeString('en-US', { 
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true 
+      })}`;
+    } catch (error) {
+      console.error('❌ Error formatting time:', dateString, error);
+      return '';
+    }
+  };
+
+  return (
+    <View style={styles.sectionContainer}>
+      <View style={styles.sectionHeader}>
+        <Text style={styles.sectionTitle}>My Care Requests</Text>
+        <TouchableOpacity 
+          onPress={handleFetchRequests}
+          style={styles.fetchButton}
+          disabled={loading}
+        >
+          <Text style={styles.fetchButtonText}>
+            Get Care Now
+          </Text>
+        </TouchableOpacity>
       </View>
-      <View style={styles.messageCard}>
-        <View style={styles.messageAvatar}>
-          <Ionicons name="person-circle-outline" size={40} color="#8E8E93" />
-        </View>
-        <View style={styles.messageInfo}>
-          <Text style={styles.messageSender}>Nurse Practitioner</Text>
-          <Text style={styles.messagePreview}>Following up on your last visit...</Text>
-          <Text style={styles.messageTime}>Yesterday</Text>
-        </View>
+      <View style={styles.careRequestsList}>
+        {careRequests.map((request) => (
+          <TouchableOpacity key={request.id} style={styles.careRequestCard}>
+            <View style={styles.careRequestInfo}>
+              <View style={styles.careRequestHeader}>
+                <Text style={styles.careRequestTitle}>
+                  {request.title}
+                </Text>
+                {request.patientUnreadMessages && (
+                  <View style={styles.newBadge}>
+                    <Text style={styles.newBadgeText}>New</Text>
+                  </View>
+                )}
+              </View>
+              <Text style={styles.careRequestSubtitle}>
+                Automated Message
+              </Text>
+              <Text style={styles.careRequestTime}>
+                {formatTime(request.lastMessage.sentAt)}
+              </Text>
+              <Text style={styles.careRequestMessage}>
+                We have received your care request!
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color="#8E8E93" />
+          </TouchableOpacity>
+        ))}
       </View>
     </View>
-  </View>
-);
+  );
+};
 
 // Placeholder component for quick actions
 const QuickActions = () => (
@@ -237,7 +284,7 @@ export default function HomeScreen() {
       <GetCareSection />
       <HealthMetrics />
       <UpcomingAppointments />
-      <RecentMessages />
+      <CareRequests />
       <QuickActions />
     </ScrollView>
   );
@@ -450,5 +497,67 @@ const styles = StyleSheet.create({
     color: '#007AFF',
     fontSize: 16,
     marginRight: 4,
+  },
+  fetchButton: {
+    backgroundColor: '#007AFF',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 15,
+  },
+  fetchButtonText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  careRequestsList: {
+    gap: 12,
+  },
+  careRequestCard: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#F2F2F7',
+    padding: 16,
+    borderRadius: 8,
+  },
+  careRequestInfo: {
+    flex: 1,
+  },
+  careRequestHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  careRequestTitle: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#000000',
+    marginBottom: 4,
+  },
+  careRequestSubtitle: {
+    fontSize: 14,
+    color: '#8E8E93',
+    marginBottom: 2,
+  },
+  careRequestTime: {
+    fontSize: 12,
+    color: '#8E8E93',
+    marginBottom: 2,
+  },
+  careRequestMessage: {
+    fontSize: 14,
+    color: '#8E8E93',
+  },
+  newBadge: {
+    backgroundColor: '#FF3B30',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 12,
+    marginLeft: 8,
+  },
+  newBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '500',
   },
 }); 
