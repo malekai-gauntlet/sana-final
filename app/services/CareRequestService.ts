@@ -21,81 +21,55 @@ export interface CareRequest {
 }
 
 class CareRequestService {
-  private baseUrl = 'http://localhost/patient_api';
+  private baseUrl = 'http://localhost/member_portal/api';
 
-  // Create a new care request
   async createCareRequest(type: CareRequestType): Promise<CareRequest | null> {
     try {
-      console.log('🏥 Creating care request:', { type });
-      
-      // Simplify the request body to match exactly what we see working
-      const requestBody = { type };
-      console.log('📤 Request body:', requestBody);
+      // First check if user is authenticated
+      const isAuthenticated = await authService.isAuthenticated();
+      console.log('👤 Is user authenticated:', isAuthenticated);
 
+      if (!isAuthenticated) {
+        throw new Error('User is not authenticated');
+      }
+
+      const authToken = await authService.getPrimaryToken();
+      console.log('🔑 Auth Token present:', !!authToken);
+      console.log('🔑 Auth Token length:', authToken?.length || 0);
+
+      if (!authToken) {
+        // Debug: Check token directly from SecureStore
+        await authService.debugToken();
+        throw new Error('No authentication token found');
+      }
+
+      const requestBody = {
+        type: type,
+        title: "Test Care Request",
+        content: "This is a test care request"
+      };
+      
       const response = await fetch(`${this.baseUrl}/care_requests`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'Authorization': authToken
         },
         body: JSON.stringify(requestBody)
       });
 
-      console.log('📥 Response status:', response.status);
-      const responseText = await response.text();
-      console.log('📥 Response body:', responseText);
-
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        throw new Error(`Failed to create care request: ${response.status}`);
       }
 
-      const data = JSON.parse(responseText);
-      return data;
+      const data = await response.json();
+      return data.care_request;
     } catch (error) {
-      console.error('❌ Failed to create care request:', error);
+      console.error('❌ Error:', error);
       Alert.alert('Error', 'Failed to create care request. Please try again.');
       return null;
     }
   }
-
-  // Get care request details
-  async getCareRequest(id: string): Promise<CareRequest | null> {
-    try {
-      const token = await authService.getPrimaryToken();
-      if (!token) {
-        throw new Error('No authentication token found');
-      }
-
-      // Use the exact endpoint from the routes
-      const response = await fetch(`${this.baseUrl}/care_requests/${id}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
-      return data;
-    } catch (error) {
-      console.error('Failed to get care request:', error);
-      return null;
-    }
-  }
-
-  // Submit consent for a care request
-  async submitConsent(careRequestId: string): Promise<boolean> {
-    try {
-      // In the future, this will make a real API call to /patient_api/consent-forms/{id}/signatures
-      return true;
-    } catch (error) {
-      console.error('Failed to submit consent:', error);
-      Alert.alert('Error', 'Failed to submit consent. Please try again.');
-      return false;
-    }
-  }
 }
 
-// Export a single instance to be used throughout the app
-export const careRequestService = new CareRequestService(); 
+export const careRequestService = new CareRequestService();
