@@ -1,5 +1,5 @@
 import { Alert } from 'react-native';
-import { carePlatformClient } from './CarePlatformClient';
+import { authService } from './AuthService';
 
 export type CareRequestType = 
   | 'sick'
@@ -21,20 +21,37 @@ export interface CareRequest {
 }
 
 class CareRequestService {
+  private baseUrl = 'http://localhost/patient_api';
+
   // Create a new care request
   async createCareRequest(type: CareRequestType): Promise<CareRequest | null> {
     try {
-      // In the future, this will make a real API call to /patient_api/care_requests
-      const mockCareRequest: CareRequest = {
-        id: Date.now().toString(),
-        type,
-        status: 'pending',
-        createdAt: new Date().toISOString()
-      };
+      console.log('🏥 Creating care request:', { type });
+      
+      // Simplify the request body to match exactly what we see working
+      const requestBody = { type };
+      console.log('📤 Request body:', requestBody);
 
-      return mockCareRequest;
+      const response = await fetch(`${this.baseUrl}/care_requests`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(requestBody)
+      });
+
+      console.log('📥 Response status:', response.status);
+      const responseText = await response.text();
+      console.log('📥 Response body:', responseText);
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = JSON.parse(responseText);
+      return data;
     } catch (error) {
-      console.error('Failed to create care request:', error);
+      console.error('❌ Failed to create care request:', error);
       Alert.alert('Error', 'Failed to create care request. Please try again.');
       return null;
     }
@@ -43,13 +60,24 @@ class CareRequestService {
   // Get care request details
   async getCareRequest(id: string): Promise<CareRequest | null> {
     try {
-      // In the future, this will make a real API call to /patient_api/care_requests/{id}
-      return {
-        id,
-        type: 'sick',
-        status: 'pending',
-        createdAt: new Date().toISOString()
-      };
+      const token = await authService.getPrimaryToken();
+      if (!token) {
+        throw new Error('No authentication token found');
+      }
+
+      // Use the exact endpoint from the routes
+      const response = await fetch(`${this.baseUrl}/care_requests/${id}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return data;
     } catch (error) {
       console.error('Failed to get care request:', error);
       return null;
