@@ -1,8 +1,10 @@
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, KeyboardAvoidingView, Platform, Image } from 'react-native';
 import { useState, useEffect, useRef } from 'react';
 import { useLocalSearchParams, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { messagingService, type Message } from '../services/MessagingService';
+import { messagingService, type Message, type Attachment } from '../services/MessagingService';
+import * as ImagePicker from 'expo-image-picker';
+import { QuestionnaireForm } from '../components/QuestionnaireForm';
 
 // Header component
 const Header = () => (
@@ -17,8 +19,61 @@ const Header = () => (
   </View>
 );
 
+// Questionnaire component
+const QuestionnaireMessage = ({ data, isProvider }: { data: any, isProvider: boolean }) => {
+  const [isAnswered, setIsAnswered] = useState(false);
+
+  const handleSubmit = (answers: { [key: string]: string }) => {
+    console.log('Questionnaire answers:', answers);
+    setIsAnswered(true);
+    // Here you would typically send these answers back to the server
+  };
+
+  if (isAnswered) {
+    return (
+      <View style={[
+        styles.questionnaireBubble,
+        isProvider ? styles.providerBubble : styles.patientBubble
+      ]}>
+        <Text style={[
+          styles.messageText,
+          isProvider ? styles.providerText : styles.patientText
+        ]}>
+          Thank you for completing the questionnaire!
+        </Text>
+      </View>
+    );
+  }
+
+  return (
+    <View style={[
+      styles.questionnaireBubble,
+      isProvider ? styles.providerBubble : styles.patientBubble
+    ]}>
+      <QuestionnaireForm 
+        questions={data.questions}
+        onSubmit={handleSubmit}
+      />
+    </View>
+  );
+};
+
+// Image message component
+const ImageMessage = ({ url, isProvider }: { url: string, isProvider: boolean }) => (
+  <View style={[
+    styles.imageBubble,
+    isProvider ? styles.providerBubble : styles.patientBubble
+  ]}>
+    <Image
+      source={{ uri: url }}
+      style={styles.messageImage}
+      resizeMode="cover"
+    />
+  </View>
+);
+
 // Message bubble component
-const MessageBubble = ({ message }: { message: Message }) => {
+const MessageBubble = ({ message, onReply }: { message: Message, onReply?: (message: Message) => void }) => {
   const isProvider = message.author.type === 'provider';
   
   return (
@@ -26,26 +81,62 @@ const MessageBubble = ({ message }: { message: Message }) => {
       styles.messageBubbleContainer,
       isProvider ? styles.providerMessage : styles.patientMessage
     ]}>
+      {message.replyTo && (
+        <View style={styles.replyContainer}>
+          <Text style={styles.replyText}>
+            <Ionicons name="return-up-back" size={12} color="#8E8E93" />
+            {' '}Replying to message
+          </Text>
+        </View>
+      )}
       <View style={[
         styles.messageBubble,
         isProvider ? styles.providerBubble : styles.patientBubble
       ]}>
-        <Text style={[
-          styles.messageText,
-          isProvider ? styles.providerText : styles.patientText
-        ]}>
-          {message.text}
-        </Text>
-        <Text style={[
-          styles.messageTime,
-          isProvider ? styles.providerTime : styles.patientTime
-        ]}>
-          {new Date(message.timestamp).toLocaleTimeString([], { 
-            hour: 'numeric',
-            minute: '2-digit',
-            hour12: true
-          })}
-        </Text>
+        {message.text && (
+          <Text style={[
+            styles.messageText,
+            isProvider ? styles.providerText : styles.patientText
+          ]}>
+            {message.text}
+          </Text>
+        )}
+        
+        {message.attachments?.map((attachment) => (
+          <View key={attachment.id}>
+            {attachment.type === 'questionnaire' && (
+              <QuestionnaireMessage data={attachment.data} isProvider={isProvider} />
+            )}
+            {attachment.type === 'image' && attachment.url && (
+              <ImageMessage url={attachment.url} isProvider={isProvider} />
+            )}
+          </View>
+        ))}
+
+        <View style={styles.messageFooter}>
+          <Text style={[
+            styles.messageTime,
+            isProvider ? styles.providerTime : styles.patientTime
+          ]}>
+            {new Date(message.timestamp).toLocaleTimeString([], { 
+              hour: 'numeric',
+              minute: '2-digit',
+              hour12: true
+            })}
+          </Text>
+          {onReply && (
+            <TouchableOpacity
+              style={styles.replyButton}
+              onPress={() => onReply(message)}
+            >
+              <Ionicons 
+                name="return-up-back" 
+                size={16} 
+                color={isProvider ? '#8E8E93' : 'rgba(255, 255, 255, 0.7)'} 
+              />
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
     </View>
   );
@@ -57,10 +148,33 @@ export default function ChatScreen() {
   const [newMessage, setNewMessage] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const scrollViewRef = useRef<ScrollView>(null);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [replyingTo, setReplyingTo] = useState<Message | null>(null);
 
   useEffect(() => {
     loadMessages();
+    requestPermissions();
   }, []);
+
+  const requestPermissions = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      alert('Sorry, we need camera roll permissions to upload images!');
+    }
+  };
+
+  const pickImage = async () => {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [4, 3],
+      quality: 1,
+    });
+
+    if (!result.canceled) {
+      setSelectedImage(result.assets[0].uri);
+    }
+  };
 
   const loadMessages = async () => {
     try {
@@ -78,13 +192,40 @@ export default function ChatScreen() {
     }
   };
 
-  const handleSend = async () => {
-    if (!newMessage.trim()) return;
+  const handleReply = (message: Message) => {
+    setReplyingTo(message);
+  };
 
-    const message = await messagingService.sendMessage(id as string, newMessage.trim());
+  const handleSend = async () => {
+    if (!newMessage.trim() && !selectedImage) return;
+
+    let message: Message | null = null;
+
+    if (selectedImage) {
+      message = await messagingService.sendMessage(
+        id as string,
+        newMessage.trim(),
+        [{
+          id: Date.now().toString(),
+          type: 'image',
+          url: selectedImage
+        }],
+        replyingTo?.id
+      );
+      setSelectedImage(null);
+    } else {
+      message = await messagingService.sendMessage(
+        id as string,
+        newMessage.trim(),
+        undefined,
+        replyingTo?.id
+      );
+    }
+
     if (message) {
-      setMessages(prev => [...prev, message]);
+      setMessages(prev => [...prev, message!]);
       setNewMessage('');
+      setReplyingTo(null);
       // Scroll to bottom after sending
       setTimeout(() => {
         scrollViewRef.current?.scrollToEnd({ animated: true });
@@ -107,11 +248,48 @@ export default function ChatScreen() {
           onContentSizeChange={() => scrollViewRef.current?.scrollToEnd({ animated: false })}
         >
           {messages.map((message) => (
-            <MessageBubble key={message.id} message={message} />
+            <MessageBubble 
+              key={message.id} 
+              message={message}
+              onReply={handleReply}
+            />
           ))}
         </ScrollView>
 
+        {replyingTo && (
+          <View style={styles.replyingToContainer}>
+            <Text style={styles.replyingToText}>
+              Replying to: {replyingTo.text.substring(0, 50)}
+              {replyingTo.text.length > 50 ? '...' : ''}
+            </Text>
+            <TouchableOpacity
+              style={styles.cancelReplyButton}
+              onPress={() => setReplyingTo(null)}
+            >
+              <Ionicons name="close-circle" size={20} color="#8E8E93" />
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {selectedImage && (
+          <View style={styles.selectedImageContainer}>
+            <Image source={{ uri: selectedImage }} style={styles.selectedImagePreview} />
+            <TouchableOpacity 
+              style={styles.removeImageButton}
+              onPress={() => setSelectedImage(null)}
+            >
+              <Ionicons name="close-circle" size={24} color="#FF3B30" />
+            </TouchableOpacity>
+          </View>
+        )}
+
         <View style={styles.inputContainer}>
+          <TouchableOpacity 
+            style={styles.attachButton}
+            onPress={pickImage}
+          >
+            <Ionicons name="image" size={24} color="#007AFF" />
+          </TouchableOpacity>
           <TextInput
             style={styles.input}
             value={newMessage}
@@ -122,14 +300,14 @@ export default function ChatScreen() {
             placeholderTextColor="#8E8E93"
           />
           <TouchableOpacity 
-            style={[styles.sendButton, !newMessage.trim() && styles.sendButtonDisabled]} 
+            style={[styles.sendButton, (!newMessage.trim() && !selectedImage) && styles.sendButtonDisabled]} 
             onPress={handleSend}
-            disabled={!newMessage.trim()}
+            disabled={!newMessage.trim() && !selectedImage}
           >
             <Ionicons 
               name="send" 
               size={24} 
-              color={newMessage.trim() ? '#007AFF' : '#8E8E93'} 
+              color={(newMessage.trim() || selectedImage) ? '#007AFF' : '#8E8E93'} 
             />
           </TouchableOpacity>
         </View>
@@ -247,5 +425,123 @@ const styles = StyleSheet.create({
   },
   sendButtonDisabled: {
     opacity: 0.5,
+  },
+  questionnaireBubble: {
+    marginTop: 8,
+    padding: 12,
+    borderRadius: 12,
+  },
+  questionContainer: {
+    marginBottom: 16,
+  },
+  questionText: {
+    fontSize: 16,
+    marginBottom: 8,
+  },
+  optionsContainer: {
+    gap: 8,
+  },
+  optionButton: {
+    padding: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  providerOptionButton: {
+    borderColor: '#8E8E93',
+    backgroundColor: 'transparent',
+  },
+  patientOptionButton: {
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  optionText: {
+    fontSize: 14,
+  },
+  textInput: {
+    borderWidth: 1,
+    borderRadius: 8,
+    padding: 8,
+    fontSize: 14,
+    minHeight: 40,
+  },
+  providerTextInput: {
+    borderColor: '#8E8E93',
+    backgroundColor: '#FFFFFF',
+    color: '#000000',
+  },
+  patientTextInput: {
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    color: '#FFFFFF',
+  },
+  imageBubble: {
+    marginTop: 8,
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  messageImage: {
+    width: 200,
+    height: 200,
+    borderRadius: 12,
+  },
+  replyContainer: {
+    backgroundColor: 'rgba(0, 0, 0, 0.1)',
+    padding: 4,
+    borderRadius: 4,
+    marginBottom: 4,
+  },
+  replyText: {
+    fontSize: 12,
+    color: '#8E8E93',
+  },
+  attachButton: {
+    width: 32,
+    height: 32,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 8,
+  },
+  selectedImageContainer: {
+    padding: 8,
+    backgroundColor: '#FFFFFF',
+    borderTopWidth: 1,
+    borderTopColor: '#E5E5EA',
+  },
+  selectedImagePreview: {
+    width: 100,
+    height: 100,
+    borderRadius: 8,
+  },
+  removeImageButton: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    padding: 4,
+  },
+  messageFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 4,
+  },
+  replyButton: {
+    padding: 4,
+  },
+  replyingToContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F2F2F7',
+    padding: 8,
+    borderTopWidth: 1,
+    borderTopColor: '#E5E5EA',
+  },
+  replyingToText: {
+    flex: 1,
+    fontSize: 14,
+    color: '#8E8E93',
+    marginRight: 8,
+  },
+  cancelReplyButton: {
+    padding: 4,
   },
 }); 

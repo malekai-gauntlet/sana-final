@@ -1,6 +1,7 @@
 import { Alert } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 import { authService } from './AuthService';
+import { Message, Attachment } from './MessagingService';
 
 interface TokenResponse {
   access_token: string;
@@ -8,17 +9,6 @@ interface TokenResponse {
 }
 
 // Types
-export interface Message {
-  id: string;
-  text: string;
-  author: {
-    id: string;
-    type: 'patient' | 'provider' | 'system';
-    name: string;
-  };
-  timestamp: string;
-}
-
 export interface Conversation {
   id: string;
   provider: {
@@ -47,7 +37,8 @@ const MOCK_CONVERSATIONS: Conversation[] = [
         type: 'provider',
         name: 'Dr. Sarah Johnson'
       },
-      timestamp: new Date(Date.now() - 22 * 60 * 60 * 1000).toISOString()
+      timestamp: new Date(Date.now() - 22 * 60 * 60 * 1000).toISOString(),
+      messageType: 'text'
     },
     unread: true
   },
@@ -66,7 +57,8 @@ const MOCK_CONVERSATIONS: Conversation[] = [
         type: 'provider',
         name: 'Dr. Michael Chen'
       },
-      timestamp: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString()
+      timestamp: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+      messageType: 'text'
     },
     unread: false
   },
@@ -85,7 +77,8 @@ const MOCK_CONVERSATIONS: Conversation[] = [
         type: 'provider',
         name: 'Dr. Emily Martinez'
       },
-      timestamp: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString()
+      timestamp: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
+      messageType: 'text'
     },
     unread: false
   }
@@ -101,7 +94,8 @@ const MOCK_MESSAGES: { [key: string]: Message[] } = {
         type: 'provider',
         name: 'Dr. Sarah Johnson'
       },
-      timestamp: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
+      timestamp: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
+      messageType: 'text'
     },
     {
       id: '2',
@@ -111,7 +105,8 @@ const MOCK_MESSAGES: { [key: string]: Message[] } = {
         type: 'patient',
         name: 'John Doe'
       },
-      timestamp: new Date(Date.now() - 23 * 60 * 60 * 1000).toISOString()
+      timestamp: new Date(Date.now() - 23 * 60 * 60 * 1000).toISOString(),
+      messageType: 'text'
     },
     {
       id: '3',
@@ -121,7 +116,8 @@ const MOCK_MESSAGES: { [key: string]: Message[] } = {
         type: 'provider',
         name: 'Dr. Sarah Johnson'
       },
-      timestamp: new Date(Date.now() - 22 * 60 * 60 * 1000).toISOString()
+      timestamp: new Date(Date.now() - 22 * 60 * 60 * 1000).toISOString(),
+      messageType: 'text'
     }
   ],
   '2': [
@@ -133,7 +129,8 @@ const MOCK_MESSAGES: { [key: string]: Message[] } = {
         type: 'provider',
         name: 'Dr. Michael Chen'
       },
-      timestamp: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString()
+      timestamp: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
+      messageType: 'text'
     },
     {
       id: '5',
@@ -143,7 +140,8 @@ const MOCK_MESSAGES: { [key: string]: Message[] } = {
         type: 'provider',
         name: 'Dr. Michael Chen'
       },
-      timestamp: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString()
+      timestamp: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+      messageType: 'text'
     }
   ],
   '3': [
@@ -155,7 +153,8 @@ const MOCK_MESSAGES: { [key: string]: Message[] } = {
         type: 'provider',
         name: 'Dr. Emily Martinez'
       },
-      timestamp: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString()
+      timestamp: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
+      messageType: 'text'
     }
   ]
 };
@@ -180,7 +179,12 @@ class CarePlatformClient {
   }
 
   // Send a new message in a conversation
-  async sendMessage(careRequestId: string, text: string): Promise<Message | null> {
+  async sendMessage(
+    careRequestId: string,
+    text: string,
+    attachments?: Attachment[],
+    replyTo?: string
+  ): Promise<Message | null> {
     try {
       const newMessage: Message = {
         id: Date.now().toString(),
@@ -190,7 +194,10 @@ class CarePlatformClient {
           type: 'patient',
           name: 'John Doe'
         },
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        messageType: 'text',
+        attachments,
+        replyTo
       };
 
       // Add to mock messages
