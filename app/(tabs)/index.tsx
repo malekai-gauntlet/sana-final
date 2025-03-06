@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Alert } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { careRequestService, type CareRequestType, type CareRequest } from '../services/CareRequestService';
+import { activityService, type Activity } from '../services/ActivityService';
 import { ConsentModal } from '../components/ConsentModal';
 
 // Types
@@ -121,30 +122,98 @@ const GetCareSection = () => {
   );
 };
 
-// Health Metrics Component
-const HealthMetrics = () => (
-  <View style={styles.sectionContainer}>
-    <Text style={styles.sectionTitle}>Health Overview</Text>
-    <View style={styles.metricsGrid}>
-      <View style={styles.metricCard}>
-        <Text style={styles.metricValue}>120/80</Text>
-        <Text style={styles.metricLabel}>Blood Pressure</Text>
+// Activities Component
+const Activities = () => {
+  const [activities, setActivities] = useState<Activity[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadActivities();
+  }, []);
+
+  const loadActivities = async () => {
+    try {
+      const data = await activityService.getActivities();
+      setActivities(data);
+    } catch (error) {
+      console.error('Failed to load activities:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleActivityPress = (activity: Activity) => {
+    router.push({
+      pathname: "/(chat)/[id]",
+      params: { id: activity.careRequestId }
+    });
+  };
+
+  const getActivityIcon = (type: Activity['type']) => {
+    switch (type) {
+      case 'questionnaire':
+        return 'document-text-outline';
+      case 'referral':
+        return 'people-outline';
+      default:
+        return 'document-outline';
+    }
+  };
+
+  if (loading) {
+    return (
+      <View style={styles.sectionContainer}>
+        <Text style={styles.sectionTitle}>Activities List</Text>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#007AFF" />
+        </View>
       </View>
-      <View style={styles.metricCard}>
-        <Text style={styles.metricValue}>72</Text>
-        <Text style={styles.metricLabel}>Heart Rate</Text>
+    );
+  }
+
+  if (activities.length === 0) {
+    return (
+      <View style={styles.sectionContainer}>
+        <Text style={styles.sectionTitle}>Activities List</Text>
+        <View style={styles.emptyContainer}>
+          <Text style={styles.emptyText}>No activities at the moment</Text>
+        </View>
       </View>
-      <View style={styles.metricCard}>
-        <Text style={styles.metricValue}>7.2h</Text>
-        <Text style={styles.metricLabel}>Sleep</Text>
-      </View>
-      <View style={styles.metricCard}>
-        <Text style={styles.metricValue}>8,234</Text>
-        <Text style={styles.metricLabel}>Steps</Text>
+    );
+  }
+
+  return (
+    <View style={styles.sectionContainer}>
+      <Text style={styles.sectionTitle}>Activities List</Text>
+      <View style={styles.activitiesList}>
+        {activities.map((activity) => (
+          <TouchableOpacity
+            key={activity.id}
+            style={styles.activityCard}
+            onPress={() => handleActivityPress(activity)}
+          >
+            <View style={styles.activityContent}>
+              <Ionicons 
+                name={getActivityIcon(activity.type)} 
+                size={24} 
+                color="#007AFF" 
+                style={styles.activityIcon}
+              />
+              <View style={styles.activityInfo}>
+                <Text style={styles.activityTitle}>{activity.title}</Text>
+                <Text style={styles.activityStatus}>
+                  {activity.status === 'not_started' ? 'Not started' :
+                   activity.status === 'in_progress' ? 'In progress' : 'Completed'}
+                </Text>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color="#8E8E93" />
+            </View>
+          </TouchableOpacity>
+        ))}
       </View>
     </View>
-  </View>
-);
+  );
+};
 
 // Placeholder component for upcoming appointments
 const UpcomingAppointments = () => (
@@ -288,7 +357,7 @@ export default function HomeScreen() {
       <SearchBar />
       <WelcomeSection />
       <GetCareSection />
-      <HealthMetrics />
+      <Activities />
       <UpcomingAppointments />
       <CareRequests />
       <QuickActions />
@@ -565,5 +634,46 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 12,
     fontWeight: '500',
+  },
+  loadingContainer: {
+    padding: 32,
+    alignItems: 'center',
+  },
+  emptyContainer: {
+    padding: 32,
+    alignItems: 'center',
+  },
+  emptyText: {
+    fontSize: 16,
+    color: '#8E8E93',
+  },
+  activitiesList: {
+    gap: 12,
+  },
+  activityCard: {
+    backgroundColor: '#F2F2F7',
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  activityContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+  },
+  activityIcon: {
+    marginRight: 12,
+  },
+  activityInfo: {
+    flex: 1,
+  },
+  activityTitle: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#000000',
+    marginBottom: 4,
+  },
+  activityStatus: {
+    fontSize: 14,
+    color: '#8E8E93',
   },
 }); 
