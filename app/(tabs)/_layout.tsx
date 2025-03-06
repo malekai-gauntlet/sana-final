@@ -10,14 +10,18 @@ export default function TabLayout() {
           height: 88,
           paddingTop: 8,
           paddingBottom: 30,
-          backgroundColor: '#fff',
-          borderTopColor: '#E1E1E1',
+          backgroundColor: '#FFFFFF',
+          borderTopColor: '#E5E5EA',
         },
-        tabBarActiveTintColor: '#007AFF',
+        tabBarActiveTintColor: '#1D363F',
         tabBarInactiveTintColor: '#8E8E93',
         tabBarLabelStyle: {
           fontSize: 12,
         },
+        headerStyle: {
+          backgroundColor: '#FFFFFF',
+        },
+        headerTintColor: '#1D363F',
       }}>
       <Tabs.Screen
         name="index"

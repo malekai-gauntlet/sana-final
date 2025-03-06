@@ -175,7 +175,7 @@ export default function ChatScreen() {
     requestPermissions();
     
     // Only load messages if this is not a new care request
-    if (!isNewRequest) {
+    if (isNewRequest !== 'true') {
       loadMessages();
     } else {
       // Show welcome message for new care requests
@@ -191,7 +191,7 @@ export default function ChatScreen() {
         messageType: 'text'
       }]);
     }
-  }, [isNewRequest]);
+  }, [id, isNewRequest]); // Add id to dependencies
 
   const requestPermissions = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -217,13 +217,40 @@ export default function ChatScreen() {
     try {
       setIsLoading(true);
       const fetchedMessages = await careRequestService.getMessages(id as string);
-      // Sort messages by timestamp in ascending order (oldest first)
-      const sortedMessages = [...fetchedMessages].sort((a, b) => 
-        new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
-      );
-      setMessages(sortedMessages);
+      if (fetchedMessages && fetchedMessages.length > 0) {
+        // Sort messages by timestamp in ascending order (oldest first)
+        const sortedMessages = [...fetchedMessages].sort((a, b) => 
+          new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+        );
+        setMessages(sortedMessages);
+      } else {
+        // If no messages, show a default message
+        setMessages([{
+          id: 'default',
+          text: 'No messages in this conversation yet.',
+          author: {
+            id: 'system',
+            type: 'system',
+            name: 'System'
+          },
+          timestamp: new Date().toISOString(),
+          messageType: 'text'
+        }]);
+      }
     } catch (error) {
       console.error('Error loading messages:', error);
+      // Show error message in the chat
+      setMessages([{
+        id: 'error',
+        text: 'Failed to load messages. Please try again.',
+        author: {
+          id: 'system',
+          type: 'system',
+          name: 'System'
+        },
+        timestamp: new Date().toISOString(),
+        messageType: 'text'
+      }]);
     } finally {
       setIsLoading(false);
     }

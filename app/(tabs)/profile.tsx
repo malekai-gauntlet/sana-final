@@ -7,16 +7,15 @@ import { authService } from '../services/AuthService';
 const ProfileHeader = () => (
   <View style={styles.headerContainer}>
     <View style={styles.avatarContainer}>
-      <Image
-        source={{ uri: 'https://via.placeholder.com/100' }}
-        style={styles.avatar}
-      />
+      <View style={styles.avatar}>
+        <Ionicons name="person-outline" size={50} color="#1D363F" />
+      </View>
       <TouchableOpacity style={styles.editAvatarButton}>
         <Ionicons name="camera" size={20} color="#FFFFFF" />
       </TouchableOpacity>
     </View>
     <View style={styles.profileInfo}>
-      <Text style={styles.name}>John Doe</Text>
+      <Text style={styles.name}>Malekai Mischke</Text>
       <Text style={styles.memberId}>Member ID: 123456789</Text>
       <Text style={styles.planType}>Premium Health Plan</Text>
     </View>
@@ -39,7 +38,7 @@ const SectionHeader = ({ title, action }: { title: string; action?: string }) =>
 const InfoItem = ({ icon, label, value }: { icon: keyof typeof Ionicons.glyphMap; label: string; value: string }) => (
   <View style={styles.infoItem}>
     <View style={styles.infoIcon}>
-      <Ionicons name={icon} size={24} color="#007AFF" />
+      <Ionicons name={icon} size={24} color="#1D363F" />
     </View>
     <View style={styles.infoContent}>
       <Text style={styles.infoLabel}>{label}</Text>
@@ -64,7 +63,7 @@ const IntegrationCard = ({
   <TouchableOpacity style={styles.integrationCard}>
     <View style={styles.integrationHeader}>
       <View style={styles.integrationIcon}>
-        <Ionicons name={icon} size={24} color="#007AFF" />
+        <Ionicons name={icon} size={24} color="#1D363F" />
       </View>
       <View style={styles.integrationInfo}>
         <Text style={styles.integrationName}>{name}</Text>
@@ -199,12 +198,17 @@ const styles = StyleSheet.create({
     width: 100,
     height: 100,
     borderRadius: 50,
+    backgroundColor: '#F2F2F7',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E5E5EA',
   },
   editAvatarButton: {
     position: 'absolute',
     right: 0,
     bottom: 0,
-    backgroundColor: '#007AFF',
+    backgroundColor: '#1D363F',
     width: 32,
     height: 32,
     borderRadius: 16,
@@ -229,7 +233,7 @@ const styles = StyleSheet.create({
   },
   planType: {
     fontSize: 16,
-    color: '#007AFF',
+    color: '#ECC749',
     fontWeight: '500',
   },
   section: {
@@ -253,7 +257,7 @@ const styles = StyleSheet.create({
     color: '#000000',
   },
   actionText: {
-    color: '#007AFF',
+    color: '#1D363F',
     fontSize: 16,
   },
   infoItem: {
@@ -298,7 +302,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#007AFF10',
+    backgroundColor: '#1D363F10',
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
@@ -321,7 +325,7 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
   },
   connectedBadge: {
-    backgroundColor: '#34C75910',
+    backgroundColor: '#1D363F10',
   },
   disconnectedBadge: {
     backgroundColor: '#FF3B3010',
@@ -333,7 +337,7 @@ const styles = StyleSheet.create({
     marginRight: 4,
   },
   connectedDot: {
-    backgroundColor: '#34C759',
+    backgroundColor: '#1D363F',
   },
   disconnectedDot: {
     backgroundColor: '#FF3B30',
@@ -343,7 +347,7 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   connectedText: {
-    color: '#34C759',
+    color: '#1D363F',
   },
   disconnectedText: {
     color: '#FF3B30',

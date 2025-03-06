@@ -56,31 +56,6 @@ const CalendarHeader = () => {
   );
 };
 
-// Quick Actions Component
-const QuickActions = () => (
-  <View style={styles.quickActionsContainer}>
-    <Text style={styles.sectionTitle}>Get care now</Text>
-    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.quickActionsList}>
-      <TouchableOpacity style={styles.quickActionButton}>
-        <Ionicons name="medical" size={24} color="#007AFF" />
-        <Text style={styles.quickActionText}>I feel sick</Text>
-      </TouchableOpacity>
-      <TouchableOpacity style={styles.quickActionButton}>
-        <Ionicons name="fitness" size={24} color="#007AFF" />
-        <Text style={styles.quickActionText}>Annual Check-Up</Text>
-      </TouchableOpacity>
-      <TouchableOpacity style={styles.quickActionButton}>
-        <Ionicons name="bandage" size={24} color="#007AFF" />
-        <Text style={styles.quickActionText}>I have an injury</Text>
-      </TouchableOpacity>
-      <TouchableOpacity style={styles.quickActionButton}>
-        <Ionicons name="heart" size={24} color="#007AFF" />
-        <Text style={styles.quickActionText}>Chronic health</Text>
-      </TouchableOpacity>
-    </ScrollView>
-  </View>
-);
-
 // Appointment List Component
 const AppointmentList = () => {
   const appointments: Appointment[] = [
@@ -113,7 +88,7 @@ const AppointmentList = () => {
           <View style={styles.appointmentActions}>
             {appointment.isVirtual && (
               <View style={styles.virtualBadge}>
-                <Ionicons name="videocam" size={16} color="#007AFF" />
+                <Ionicons name="videocam" size={16} color="#1D363F" />
                 <Text style={styles.virtualText}>Virtual</Text>
               </View>
             )}
@@ -134,7 +109,6 @@ export default function AppointmentsScreen() {
   
   return (
     <ScrollView style={styles.container}>
-      <QuickActions />
       <View style={styles.calendarContainer}>
         <Text style={styles.sectionTitle}>February 2024</Text>
         <CalendarHeader />
@@ -160,28 +134,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F2F2F7',
-  },
-  quickActionsContainer: {
-    padding: 16,
-  },
-  quickActionsList: {
-    marginTop: 12,
-  },
-  quickActionButton: {
-    backgroundColor: '#FFFFFF',
-    padding: 16,
-    borderRadius: 12,
-    marginRight: 12,
-    alignItems: 'center',
-    minWidth: 100,
-    borderWidth: 1,
-    borderColor: '#E5E5EA',
-  },
-  quickActionText: {
-    marginTop: 8,
-    fontSize: 14,
-    color: '#000000',
-    textAlign: 'center',
   },
   calendarContainer: {
     backgroundColor: '#FFFFFF',
@@ -225,21 +177,21 @@ const styles = StyleSheet.create({
     color: '#000000',
   },
   today: {
-    backgroundColor: '#007AFF',
+    backgroundColor: '#1D363F',
     borderRadius: 20,
   },
   todayText: {
     color: '#FFFFFF',
   },
   selectedDay: {
-    backgroundColor: '#007AFF20',
+    backgroundColor: '#1D363F20',
     borderRadius: 20,
   },
   appointmentIndicator: {
     width: 4,
     height: 4,
     borderRadius: 2,
-    backgroundColor: '#007AFF',
+    backgroundColor: '#ECC749',
     position: 'absolute',
     bottom: 4,
   },
@@ -276,7 +228,7 @@ const styles = StyleSheet.create({
   },
   appointmentTime: {
     fontSize: 14,
-    color: '#007AFF',
+    color: '#1D363F',
   },
   appointmentActions: {
     flexDirection: 'row',
@@ -285,7 +237,7 @@ const styles = StyleSheet.create({
   virtualBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#007AFF10',
+    backgroundColor: '#1D363F10',
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 12,
@@ -293,7 +245,7 @@ const styles = StyleSheet.create({
   },
   virtualText: {
     fontSize: 12,
-    color: '#007AFF',
+    color: '#1D363F',
     marginLeft: 4,
   },
 }); 

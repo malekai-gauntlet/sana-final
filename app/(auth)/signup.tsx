@@ -102,13 +102,13 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 17,
-    color: '#666',
+    color: '#1D363F',
     marginBottom: 8,
     fontWeight: '400',
   },
   input: {
     borderWidth: 1,
-    borderColor: '#E1E1E1',
+    borderColor: '#E5E5EA',
     padding: 16,
     borderRadius: 12,
     marginBottom: 24,
@@ -116,7 +116,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
   },
   button: {
-    backgroundColor: '#5A2ED2',
+    backgroundColor: '#1D363F',
     padding: 16,
     borderRadius: 12,
     alignItems: 'center',
@@ -124,15 +124,15 @@ const styles = StyleSheet.create({
     marginBottom: 32,
   },
   buttonDisabled: {
-    backgroundColor: '#E1E1E1',
+    backgroundColor: '#E5E5EA',
   },
   buttonText: {
-    color: '#fff',
+    color: '#ECC749',
     fontSize: 17,
     fontWeight: '600',
   },
   link: {
-    color: '#007AFF',
+    color: '#1D363F',
     fontSize: 17,
     fontWeight: '400',
   },

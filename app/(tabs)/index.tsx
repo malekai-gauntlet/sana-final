@@ -79,7 +79,7 @@ const CareOption = ({ option }: { option: CareOption }) => {
     <>
       <TouchableOpacity style={styles.careOptionCard} onPress={handlePress}>
         <View style={styles.careOptionContent}>
-          <Ionicons name={option.icon} size={24} color="#007AFF" style={styles.careOptionIcon} />
+          <Ionicons name={option.icon} size={24} color="#1D363F" style={styles.careOptionIcon} />
           <Text style={styles.careOptionTitle}>{option.title}</Text>
           <Ionicons name="chevron-forward" size={20} color="#8E8E93" />
         </View>
@@ -165,7 +165,7 @@ const Activities = () => {
       <View style={styles.sectionContainer}>
         <Text style={styles.sectionTitle}>Activities List</Text>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#007AFF" />
+          <ActivityIndicator size="large" color="#1D363F" />
         </View>
       </View>
     );
@@ -332,19 +332,19 @@ const QuickActions = () => (
     <Text style={styles.sectionTitle}>Quick Actions</Text>
     <View style={styles.quickActionsGrid}>
       <TouchableOpacity style={styles.actionButton}>
-        <Ionicons name="calendar" size={24} color="#007AFF" />
+        <Ionicons name="calendar" size={24} color="#1D363F" />
         <Text style={styles.actionButtonText}>Book{'\n'}Appointment</Text>
       </TouchableOpacity>
       <TouchableOpacity style={styles.actionButton}>
-        <Ionicons name="chatbubbles" size={24} color="#007AFF" />
+        <Ionicons name="chatbubbles" size={24} color="#1D363F" />
         <Text style={styles.actionButtonText}>Message{'\n'}Provider</Text>
       </TouchableOpacity>
       <TouchableOpacity style={styles.actionButton}>
-        <Ionicons name="document-text" size={24} color="#007AFF" />
+        <Ionicons name="document-text" size={24} color="#1D363F" />
         <Text style={styles.actionButtonText}>Health{'\n'}Records</Text>
       </TouchableOpacity>
       <TouchableOpacity style={styles.actionButton}>
-        <Ionicons name="videocam" size={24} color="#007AFF" />
+        <Ionicons name="videocam" size={24} color="#1D363F" />
         <Text style={styles.actionButtonText}>Virtual{'\n'}Care</Text>
       </TouchableOpacity>
     </View>
@@ -569,9 +569,9 @@ const styles = StyleSheet.create({
     borderTopColor: '#E5E5EA',
   },
   showMoreText: {
-    color: '#007AFF',
+    color: '#1D363F',
     fontSize: 16,
-    marginRight: 4,
+    marginRight: 8,
   },
   fetchButton: {
     backgroundColor: '#007AFF',
@@ -580,7 +580,7 @@ const styles = StyleSheet.create({
     borderRadius: 15,
   },
   fetchButtonText: {
-    color: '#FFFFFF',
+    color: '#1D363F',
     fontSize: 14,
     fontWeight: '500',
   },
@@ -624,14 +624,13 @@ const styles = StyleSheet.create({
     color: '#8E8E93',
   },
   newBadge: {
-    backgroundColor: '#FF3B30',
+    backgroundColor: '#ECC74910',
     paddingHorizontal: 8,
-    paddingVertical: 2,
+    paddingVertical: 4,
     borderRadius: 12,
-    marginLeft: 8,
   },
   newBadgeText: {
-    color: '#FFFFFF',
+    color: '#1D363F',
     fontSize: 12,
     fontWeight: '500',
   },

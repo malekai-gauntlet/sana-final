@@ -5,24 +5,26 @@ import { careRequestService, type CareRequest } from '../services/CareRequestSer
 import { router } from 'expo-router';
 
 // Types
+type SortType = 'recent' | 'unread';
+
 interface SortingOptionsProps {
-  activeSort: string;
-  onSortChange: (sort: string) => void;
+  activeSort: SortType;
+  onSortChange: (sort: SortType) => void;
 }
 
-// Placeholder component for the search bar
+// Search Bar Component
 const SearchBar = () => (
   <View style={styles.searchContainer}>
     <Ionicons name="search-outline" size={20} color="#8E8E93" />
     <TextInput
       style={styles.searchInput}
-      placeholder="Search conversations..."
+      placeholder="Search messages..."
       placeholderTextColor="#8E8E93"
     />
   </View>
 );
 
-// Placeholder component for sorting options
+// Sorting Options Component
 const SortingOptions = ({ activeSort, onSortChange }: SortingOptionsProps) => (
   <View style={styles.sortingContainer}>
     <Pressable
@@ -39,52 +41,47 @@ const SortingOptions = ({ activeSort, onSortChange }: SortingOptionsProps) => (
         Unread
       </Text>
     </Pressable>
-    <Pressable
-      style={[styles.sortButton, activeSort === 'provider' && styles.sortButtonActive]}
-      onPress={() => onSortChange('provider')}>
-      <Text style={[styles.sortButtonText, activeSort === 'provider' && styles.sortButtonTextActive]}>
-        Provider
-      </Text>
-    </Pressable>
   </View>
 );
 
-// Conversation list item component
+// Conversation Item Component
 const ConversationItem = ({ conversation }: { conversation: CareRequest }) => {
-  const timestamp = new Date(conversation.lastMessage.sentAt).toLocaleTimeString([], {
-    hour: 'numeric',
-    minute: '2-digit',
-    hour12: true
-  });
+  const handlePress = () => {
+    router.push({
+      pathname: "/(chat)/[id]",
+      params: { 
+        id: conversation.id,
+        isNewRequest: 'false'
+      }
+    });
+  };
 
   return (
-    <TouchableOpacity
-      style={styles.conversationItem}
-      onPress={() => router.push(`/chat/${conversation.id}`)}
-    >
+    <TouchableOpacity onPress={handlePress} style={styles.conversationItem}>
       <View style={styles.conversationContent}>
         <View style={styles.conversationHeader}>
-          <Text style={styles.conversationName}>
-            {conversation.providers[0]?.name || 'No Provider Assigned'}
+          <Text style={styles.conversationName}>{conversation.title}</Text>
+          <Text style={styles.conversationTime}>
+            {new Date(conversation.lastMessage.sentAt).toLocaleTimeString('en-US', {
+              hour: 'numeric',
+              minute: '2-digit',
+              hour12: true
+            })}
           </Text>
-          <Text style={styles.conversationTime}>{timestamp}</Text>
         </View>
-        <Text style={styles.conversationRole}>
-          {conversation.providers[0]?.role || 'Pending Assignment'}
-        </Text>
-        <Text style={[
-          styles.conversationMessage,
-          conversation.patientUnreadMessages && styles.conversationMessageUnread
-        ]}>
+        <Text style={styles.messagePreview} numberOfLines={2}>
           {conversation.lastMessage.text}
         </Text>
+        {conversation.patientUnreadMessages && (
+          <View style={styles.unreadIndicator} />
+        )}
       </View>
     </TouchableOpacity>
   );
 };
 
 export default function MessagesScreen() {
-  const [activeSort, setActiveSort] = useState('recent');
+  const [activeSort, setActiveSort] = useState<SortType>('recent');
   const [conversations, setConversations] = useState<CareRequest[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -107,10 +104,38 @@ export default function MessagesScreen() {
     }
   };
 
+  // Sort and filter conversations based on active sort
+  const getSortedConversations = () => {
+    if (!conversations) return [];
+
+    let sortedConversations = [...conversations];
+
+    switch (activeSort) {
+      case 'recent':
+        // Sort by most recent message
+        return sortedConversations.sort((a, b) => 
+          new Date(b.lastMessage.sentAt).getTime() - new Date(a.lastMessage.sentAt).getTime()
+        );
+      case 'unread':
+        // Filter to show only unread messages first, then sort by date
+        return sortedConversations
+          .sort((a, b) => 
+            new Date(b.lastMessage.sentAt).getTime() - new Date(a.lastMessage.sentAt).getTime()
+          )
+          .sort((a, b) => {
+            if (a.patientUnreadMessages && !b.patientUnreadMessages) return -1;
+            if (!a.patientUnreadMessages && b.patientUnreadMessages) return 1;
+            return 0;
+          });
+      default:
+        return sortedConversations;
+    }
+  };
+
   if (isLoading) {
     return (
       <View style={styles.centerContainer}>
-        <ActivityIndicator size="large" color="#007AFF" />
+        <ActivityIndicator size="large" color="#1D363F" />
       </View>
     );
   }
@@ -126,23 +151,22 @@ export default function MessagesScreen() {
     );
   }
 
+  const sortedConversations = getSortedConversations();
+
   return (
     <View style={styles.container}>
       <SearchBar />
       <SortingOptions activeSort={activeSort} onSortChange={setActiveSort} />
       <ScrollView style={styles.conversationList}>
-        {conversations.map((conversation) => (
+        {sortedConversations.map((conversation) => (
           <ConversationItem key={conversation.id} conversation={conversation} />
         ))}
-        {conversations.length === 0 && (
+        {sortedConversations.length === 0 && (
           <View style={styles.emptyState}>
             <Text style={styles.emptyStateText}>No conversations yet</Text>
           </View>
         )}
       </ScrollView>
-      <TouchableOpacity style={styles.newMessageButton}>
-        <Ionicons name="create" size={24} color="#FFFFFF" />
-      </TouchableOpacity>
     </View>
   );
 }
@@ -164,7 +188,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   retryButton: {
-    backgroundColor: '#007AFF',
+    backgroundColor: '#1D363F',
     paddingHorizontal: 20,
     paddingVertical: 10,
     borderRadius: 8,
@@ -211,7 +235,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
   },
   sortButtonActive: {
-    backgroundColor: '#007AFF',
+    backgroundColor: '#1D363F',
   },
   sortButtonText: {
     fontSize: 14,
@@ -248,36 +272,19 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#8E8E93',
   },
-  conversationRole: {
+  messagePreview: {
     fontSize: 14,
     color: '#8E8E93',
-    marginBottom: 4,
+    marginTop: 2,
   },
-  conversationMessage: {
-    fontSize: 14,
-    color: '#8E8E93',
-  },
-  conversationMessageUnread: {
-    color: '#000000',
-    fontWeight: '500',
-  },
-  newMessageButton: {
+  unreadIndicator: {
     position: 'absolute',
-    right: 16,
-    bottom: 16,
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    backgroundColor: '#007AFF',
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
+    right: 0,
+    top: '50%',
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#ECC749',
+    transform: [{ translateY: -4 }],
   },
 }); 
