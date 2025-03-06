@@ -13,6 +13,28 @@ export type CareRequestType =
   | 'surgery'
   | 'other';
 
+// Message types
+export interface Message {
+  id: string;
+  text: string;
+  author: {
+    id: string;
+    type: 'patient' | 'provider' | 'system';
+    name: string;
+  };
+  timestamp: string;
+  attachments?: Attachment[];
+  replyTo?: string;
+  messageType?: 'text' | 'questionnaire' | 'referral';
+}
+
+export interface Attachment {
+  id: string;
+  type: 'image' | 'questionnaire';
+  url?: string;
+  data?: any;
+}
+
 export interface CareRequest {
   id: string;
   type: CareRequestType;
@@ -90,7 +112,7 @@ class CareRequestService {
       return careRequests;
     } catch (error) {
       console.error('❌ getCareRequests error:', error);
-      console.error('❌ Error stack:', error.stack);
+      console.error('❌ Error stack:', (error as Error).stack);
       Alert.alert('Error', 'Failed to fetch care requests. Please try again.');
       return null;
     }
@@ -118,8 +140,8 @@ class CareRequestService {
 
       const requestBody = {
         type: type,
-        title: "Test Care Request",
-        content: "This is a test care request"
+        title: type,
+        content: "This is a care request"
       };
       
       const response = await fetch(`${this.baseUrl}/care_requests`, {
@@ -140,6 +162,76 @@ class CareRequestService {
     } catch (error) {
       console.error('❌ Error:', error);
       Alert.alert('Error', 'Failed to create care request. Please try again.');
+      return null;
+    }
+  }
+
+  // Get messages for a care request
+  async getMessages(careRequestId: string): Promise<Message[]> {
+    try {
+      const authToken = await authService.getPrimaryToken();
+      if (!authToken) {
+        throw new Error('No authentication token found');
+      }
+
+      const response = await fetch(`${this.baseUrl}/care_requests/${careRequestId}/stacks`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': authToken
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch messages: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return data.messages || [];
+    } catch (error) {
+      console.error('Failed to fetch messages:', error);
+      Alert.alert('Error', 'Failed to fetch messages. Please try again.');
+      return [];
+    }
+  }
+
+  // Send a message in a care request
+  async sendMessage(
+    careRequestId: string,
+    text: string,
+    attachments?: Attachment[],
+    replyTo?: string
+  ): Promise<Message | null> {
+    try {
+      const authToken = await authService.getPrimaryToken();
+      if (!authToken) {
+        throw new Error('No authentication token found');
+      }
+
+      const response = await fetch(`${this.baseUrl}/care_requests/${careRequestId}/stacks`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': authToken
+        },
+        body: JSON.stringify({
+          message: {
+            text,
+            attachments,
+            reply_to: replyTo
+          }
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to send message: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return data.message;
+    } catch (error) {
+      console.error('Failed to send message:', error);
+      Alert.alert('Error', 'Failed to send message. Please try again.');
       return null;
     }
   }

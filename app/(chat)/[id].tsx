@@ -1,13 +1,13 @@
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, KeyboardAvoidingView, Platform, Image } from 'react-native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, KeyboardAvoidingView, Platform, Image, Alert } from 'react-native';
 import { useState, useEffect, useRef } from 'react';
 import { useLocalSearchParams, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { messagingService, type Message, type Attachment } from '../services/MessagingService';
+import { careRequestService, type Message, type Attachment } from '../services/CareRequestService';
 import * as ImagePicker from 'expo-image-picker';
 import { QuestionnaireForm } from '../components/QuestionnaireForm';
 
 // Header component
-const Header = () => (
+const Header = ({ onSendQuestionnaire }: { onSendQuestionnaire: () => void }) => (
   <View style={styles.header}>
     <TouchableOpacity 
       style={styles.backButton} 
@@ -16,44 +16,64 @@ const Header = () => (
       <Ionicons name="chevron-back" size={28} color="#007AFF" />
       <Text style={styles.backText}>Messages</Text>
     </TouchableOpacity>
+    <TouchableOpacity 
+      style={styles.questionnaireButton}
+      onPress={onSendQuestionnaire}
+    >
+      <Ionicons name="clipboard-outline" size={24} color="#007AFF" />
+    </TouchableOpacity>
   </View>
 );
 
-// Questionnaire component
+// Add the QuestionnaireCard component
+const QuestionnaireCard = ({ onPress }: { onPress: () => void }) => (
+  <TouchableOpacity 
+    style={styles.questionnaireCard} 
+    onPress={onPress}
+    activeOpacity={0.7}
+  >
+    <View style={styles.questionnaireCardContent}>
+      <View style={styles.questionnaireCardLeft}>
+        <Ionicons name="document-text-outline" size={22} color="#000" />
+        <Text style={styles.questionnaireCardTitle}>Questionnaire</Text>
+        <Text style={styles.questionnaireCardStatus}>Not started</Text>
+      </View>
+      <Ionicons name="chevron-forward" size={20} color="#8E8E93" />
+    </View>
+  </TouchableOpacity>
+);
+
+// Update the QuestionnaireMessage component
 const QuestionnaireMessage = ({ data, isProvider }: { data: any, isProvider: boolean }) => {
-  const [isAnswered, setIsAnswered] = useState(false);
+  const [status, setStatus] = useState('not_started'); // 'not_started' | 'in_progress' | 'completed'
 
   const handleSubmit = (answers: { [key: string]: string }) => {
     console.log('Questionnaire answers:', answers);
-    setIsAnswered(true);
-    // Here you would typically send these answers back to the server
+    setStatus('completed');
   };
-
-  if (isAnswered) {
-    return (
-      <View style={[
-        styles.questionnaireBubble,
-        isProvider ? styles.providerBubble : styles.patientBubble
-      ]}>
-        <Text style={[
-          styles.messageText,
-          isProvider ? styles.providerText : styles.patientText
-        ]}>
-          Thank you for completing the questionnaire!
-        </Text>
-      </View>
-    );
-  }
 
   return (
     <View style={[
       styles.questionnaireBubble,
       isProvider ? styles.providerBubble : styles.patientBubble
     ]}>
-      <QuestionnaireForm 
-        questions={data.questions}
-        onSubmit={handleSubmit}
-      />
+      {status === 'not_started' && (
+        <QuestionnaireCard onPress={() => setStatus('in_progress')} />
+      )}
+      {status === 'in_progress' && (
+        <QuestionnaireForm 
+          questions={data.questions}
+          onSubmit={handleSubmit}
+        />
+      )}
+      {status === 'completed' && (
+        <Text style={[
+          styles.messageText,
+          isProvider ? styles.providerText : styles.patientText
+        ]}>
+          Thank you for completing the questionnaire!
+        </Text>
+      )}
     </View>
   );
 };
@@ -74,7 +94,7 @@ const ImageMessage = ({ url, isProvider }: { url: string, isProvider: boolean })
 
 // Message bubble component
 const MessageBubble = ({ message, onReply }: { message: Message, onReply?: (message: Message) => void }) => {
-  const isProvider = message.author.type === 'provider';
+  const isProvider = message.author.type === 'provider' || message.author.type === 'system';
   
   return (
     <View style={[
@@ -196,7 +216,7 @@ export default function ChatScreen() {
   const loadMessages = async () => {
     try {
       setIsLoading(true);
-      const fetchedMessages = await messagingService.getMessages(id as string);
+      const fetchedMessages = await careRequestService.getMessages(id as string);
       // Sort messages by timestamp in ascending order (oldest first)
       const sortedMessages = [...fetchedMessages].sort((a, b) => 
         new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
@@ -216,38 +236,100 @@ export default function ChatScreen() {
   const handleSend = async () => {
     if (!newMessage.trim() && !selectedImage) return;
 
-    let message: Message | null = null;
+    // Create a temporary message object for immediate UI update
+    const tempMessage: Message = {
+      id: `temp-${Date.now()}`,
+      text: newMessage.trim(),
+      author: {
+        id: 'current-user', // This should be replaced with actual user ID
+        type: 'patient',
+        name: 'You' // This should be replaced with actual user name
+      },
+      timestamp: new Date().toISOString(),
+      messageType: 'text',
+      attachments: selectedImage ? [{
+        id: Date.now().toString(),
+        type: 'image',
+        url: selectedImage
+      }] : undefined,
+      replyTo: replyingTo?.id
+    };
 
+    // Immediately update UI
+    setMessages(prev => [...prev, tempMessage]);
+    setNewMessage('');
+    setReplyingTo(null);
     if (selectedImage) {
-      message = await messagingService.sendMessage(
-        id as string,
-        newMessage.trim(),
-        [{
-          id: Date.now().toString(),
-          type: 'image',
-          url: selectedImage
-        }],
-        replyingTo?.id
-      );
       setSelectedImage(null);
-    } else {
-      message = await messagingService.sendMessage(
-        id as string,
-        newMessage.trim(),
-        undefined,
-        replyingTo?.id
-      );
     }
 
-    if (message) {
-      setMessages(prev => [...prev, message!]);
-      setNewMessage('');
-      setReplyingTo(null);
-      // Scroll to bottom after sending
-      setTimeout(() => {
-        scrollViewRef.current?.scrollToEnd({ animated: true });
-      }, 100);
+    // Scroll to bottom after sending
+    setTimeout(() => {
+      scrollViewRef.current?.scrollToEnd({ animated: true });
+    }, 100);
+
+    // TODO: Server communication temporarily disabled - will be implemented later
+    /*
+    // Try to send to server in the background
+    try {
+      const serverMessage = await careRequestService.sendMessage(
+        id as string,
+        tempMessage.text,
+        tempMessage.attachments,
+        tempMessage.replyTo
+      );
+
+      if (serverMessage) {
+        // Replace temporary message with server message
+        setMessages(prev => 
+          prev.map(msg => msg.id === tempMessage.id ? serverMessage : msg)
+        );
+      }
+    } catch (error) {
+      console.error('Failed to send message to server:', error);
+      // Optionally show an error message to user but keep the message in UI
+      Alert.alert(
+        'Warning',
+        'Message shown in chat but failed to send to server. Please check your connection.',
+        [{ text: 'OK' }]
+      );
     }
+    */
+  };
+
+  // Add a test function to simulate receiving a questionnaire (add this inside ChatScreen component)
+  const simulateReceivedQuestionnaire = () => {
+    const questionnaireMessage: Message = {
+      id: `questionnaire-${Date.now()}`,
+      text: '',
+      author: {
+        id: 'provider-1',
+        type: 'provider',
+        name: 'Dr. Devin Brown'
+      },
+      timestamp: new Date().toISOString(),
+      messageType: 'questionnaire',
+      attachments: [{
+        id: 'questionnaire-1',
+        type: 'questionnaire',
+        data: {
+          questions: [
+            {
+              id: '1',
+              type: 'text',
+              text: 'How are you feeling today?'
+            },
+            {
+              id: '2',
+              type: 'multiple_choice',
+              text: 'Rate your pain level:',
+              options: ['None', 'Mild', 'Moderate', 'Severe']
+            }
+          ]
+        }
+      }]
+    };
+    setMessages(prev => [...prev, questionnaireMessage]);
   };
 
   return (
@@ -257,7 +339,7 @@ export default function ChatScreen() {
       keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
     >
       <View style={styles.safeArea}>
-        <Header />
+        <Header onSendQuestionnaire={simulateReceivedQuestionnaire} />
         <ScrollView
           ref={scrollViewRef}
           style={styles.messagesList}
@@ -346,6 +428,7 @@ const styles = StyleSheet.create({
     height: 44,
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: 8,
     borderBottomWidth: 1,
     borderBottomColor: '#E5E5EA',
@@ -560,5 +643,37 @@ const styles = StyleSheet.create({
   },
   cancelReplyButton: {
     padding: 4,
+  },
+  questionnaireCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    overflow: 'hidden',
+    marginVertical: 4,
+  },
+  questionnaireCardContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+  },
+  questionnaireCardLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  questionnaireCardTitle: {
+    fontSize: 16,
+    color: '#000000',
+    fontWeight: '500',
+    marginRight: 8,
+  },
+  questionnaireCardStatus: {
+    fontSize: 14,
+    color: '#8E8E93',
+  },
+  questionnaireButton: {
+    padding: 8,
+    borderRadius: 8,
   },
 }); 

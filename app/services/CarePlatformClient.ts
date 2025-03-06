@@ -1,7 +1,7 @@
 import { Alert } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 import { authService } from './AuthService';
-import { Message, Attachment } from './MessagingService';
+import { Message, Attachment } from './CareRequestService';
 
 interface TokenResponse {
   access_token: string;
@@ -20,145 +20,6 @@ export interface Conversation {
   unread: boolean;
 }
 
-// Mock data for development
-const MOCK_CONVERSATIONS: Conversation[] = [
-  {
-    id: '1',
-    provider: {
-      id: 'doc1',
-      name: 'Dr. Sarah Johnson',
-      role: 'Primary Care Physician'
-    },
-    lastMessage: {
-      id: '123',
-      text: 'How long have you been experiencing these headaches?',
-      author: {
-        id: 'doc1',
-        type: 'provider',
-        name: 'Dr. Sarah Johnson'
-      },
-      timestamp: new Date(Date.now() - 22 * 60 * 60 * 1000).toISOString(),
-      messageType: 'text'
-    },
-    unread: true
-  },
-  {
-    id: '2',
-    provider: {
-      id: 'doc2',
-      name: 'Dr. Michael Chen',
-      role: 'Dermatologist'
-    },
-    lastMessage: {
-      id: '456',
-      text: 'Your test results look normal. No need for concern.',
-      author: {
-        id: 'doc2',
-        type: 'provider',
-        name: 'Dr. Michael Chen'
-      },
-      timestamp: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-      messageType: 'text'
-    },
-    unread: false
-  },
-  {
-    id: '3',
-    provider: {
-      id: 'doc3',
-      name: 'Dr. Emily Martinez',
-      role: 'Nutritionist'
-    },
-    lastMessage: {
-      id: '789',
-      text: 'Here is your personalized meal plan for the next week.',
-      author: {
-        id: 'doc3',
-        type: 'provider',
-        name: 'Dr. Emily Martinez'
-      },
-      timestamp: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
-      messageType: 'text'
-    },
-    unread: false
-  }
-];
-
-const MOCK_MESSAGES: { [key: string]: Message[] } = {
-  '1': [
-    {
-      id: '1',
-      text: 'Hello! How can I help you today?',
-      author: {
-        id: 'doc1',
-        type: 'provider',
-        name: 'Dr. Sarah Johnson'
-      },
-      timestamp: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
-      messageType: 'text'
-    },
-    {
-      id: '2',
-      text: 'I have been experiencing headaches',
-      author: {
-        id: 'patient1',
-        type: 'patient',
-        name: 'John Doe'
-      },
-      timestamp: new Date(Date.now() - 23 * 60 * 60 * 1000).toISOString(),
-      messageType: 'text'
-    },
-    {
-      id: '3',
-      text: 'How long have you been experiencing these headaches?',
-      author: {
-        id: 'doc1',
-        type: 'provider',
-        name: 'Dr. Sarah Johnson'
-      },
-      timestamp: new Date(Date.now() - 22 * 60 * 60 * 1000).toISOString(),
-      messageType: 'text'
-    }
-  ],
-  '2': [
-    {
-      id: '4',
-      text: 'I received your skin test results',
-      author: {
-        id: 'doc2',
-        type: 'provider',
-        name: 'Dr. Michael Chen'
-      },
-      timestamp: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
-      messageType: 'text'
-    },
-    {
-      id: '5',
-      text: 'Your test results look normal. No need for concern.',
-      author: {
-        id: 'doc2',
-        type: 'provider',
-        name: 'Dr. Michael Chen'
-      },
-      timestamp: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-      messageType: 'text'
-    }
-  ],
-  '3': [
-    {
-      id: '6',
-      text: 'Here is your personalized meal plan for the next week.',
-      author: {
-        id: 'doc3',
-        type: 'provider',
-        name: 'Dr. Emily Martinez'
-      },
-      timestamp: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
-      messageType: 'text'
-    }
-  ]
-};
-
 class CarePlatformClient {
   private baseUrl = 'http://localhost/patient_api';
   private memberPortalUrl = 'http://localhost/member_portal/api';
@@ -166,16 +27,79 @@ class CarePlatformClient {
   private static readonly CARE_TOKEN_KEY = 'care_platform_token';
   private static readonly CARE_TOKEN_EXPIRY_KEY = 'care_platform_token_expiry';
 
+  private getHeaders(token: string): HeadersInit {
+    return {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+      'X-Care-Platform-Authenticate': token
+    };
+  }
+
   // Get all conversations (care requests) for the current user
   async getConversations(): Promise<Conversation[]> {
-    // Return mock conversations for now
-    return MOCK_CONVERSATIONS;
+    try {
+      const carePlatformToken = await this.getCareToken();
+      if (!carePlatformToken) {
+        throw new Error('No care platform token available');
+      }
+
+      const response = await fetch(`${this.baseUrl}/care_requests`, {
+        method: 'GET',
+        headers: this.getHeaders(carePlatformToken)
+      });
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          throw new Error('Authentication failed');
+        }
+        throw new Error('Failed to fetch conversations');
+      }
+
+      const data = await response.json();
+      return data.care_requests.map((request: any) => ({
+        id: request.id,
+        provider: {
+          id: request.provider?.id || '',
+          name: request.provider?.name || 'Unknown Provider',
+          role: request.provider?.role || ''
+        },
+        lastMessage: request.last_message,
+        unread: request.patient_unread_messages || false
+      }));
+    } catch (error: any) {
+      console.error('Failed to fetch conversations:', error);
+      Alert.alert('Error', 'Failed to load conversations. Please try again.');
+      return [];
+    }
   }
 
   // Get messages for a specific conversation
   async getMessages(careRequestId: string): Promise<Message[]> {
-    // Return mock messages for the conversation
-    return MOCK_MESSAGES[careRequestId] || [];
+    try {
+      const carePlatformToken = await this.getCareToken();
+      if (!carePlatformToken) {
+        throw new Error('No care platform token available');
+      }
+
+      const response = await fetch(`${this.baseUrl}/care_requests/${careRequestId}/stacks`, {
+        method: 'GET',
+        headers: this.getHeaders(carePlatformToken)
+      });
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          throw new Error('Authentication failed');
+        }
+        throw new Error('Failed to fetch messages');
+      }
+
+      const data = await response.json();
+      return data.messages || [];
+    } catch (error: any) {
+      console.error('Failed to fetch messages:', error);
+      Alert.alert('Error', 'Failed to load messages. Please try again.');
+      return [];
+    }
   }
 
   // Send a new message in a conversation
@@ -186,36 +110,35 @@ class CarePlatformClient {
     replyTo?: string
   ): Promise<Message | null> {
     try {
-      const newMessage: Message = {
-        id: Date.now().toString(),
-        text,
-        author: {
-          id: 'patient1',
-          type: 'patient',
-          name: 'John Doe'
-        },
-        timestamp: new Date().toISOString(),
-        messageType: 'text',
-        attachments,
-        replyTo
-      };
-
-      // Add to mock messages
-      if (!MOCK_MESSAGES[careRequestId]) {
-        MOCK_MESSAGES[careRequestId] = [];
-      }
-      MOCK_MESSAGES[careRequestId].push(newMessage);
-
-      // Update last message in conversation
-      const conversation = MOCK_CONVERSATIONS.find(c => c.id === careRequestId);
-      if (conversation) {
-        conversation.lastMessage = newMessage;
+      const carePlatformToken = await this.getCareToken();
+      if (!carePlatformToken) {
+        throw new Error('No care platform token available');
       }
 
-      return newMessage;
-    } catch (error) {
+      const response = await fetch(`${this.baseUrl}/care_requests/${careRequestId}/stacks`, {
+        method: 'POST',
+        headers: this.getHeaders(carePlatformToken),
+        body: JSON.stringify({
+          message: {
+            text,
+            attachments,
+            reply_to: replyTo
+          }
+        })
+      });
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          throw new Error('Authentication failed');
+        }
+        throw new Error('Failed to send message');
+      }
+
+      const data = await response.json();
+      return data.message;
+    } catch (error: any) {
       console.error('Failed to send message:', error);
-      Alert.alert('Error', 'Failed to send message');
+      Alert.alert('Error', 'Failed to send message. Please try again.');
       return null;
     }
   }
@@ -250,20 +173,22 @@ class CarePlatformClient {
       });
 
       if (!response.ok) {
-        const errorText = await response.text();
-        console.error('Failed to get care platform token response:', errorText);
-        throw new Error(`Failed to get care platform token: ${response.status}`);
+        throw new Error('Failed to get care platform token');
       }
 
       const data: TokenResponse = await response.json();
       
-      // Store the new token and expiry - ensure both are strings
-      await SecureStore.setItemAsync(CarePlatformClient.CARE_TOKEN_KEY, data.access_token.toString());
-      await SecureStore.setItemAsync(CarePlatformClient.CARE_TOKEN_EXPIRY_KEY, data.expires_at.toString());
+      // Ensure values are strings before storing
+      const tokenString = String(data.access_token);
+      const expiryString = String(data.expires_at);
+      
+      // Store the new token and expiry
+      await SecureStore.setItemAsync(CarePlatformClient.CARE_TOKEN_KEY, tokenString);
+      await SecureStore.setItemAsync(CarePlatformClient.CARE_TOKEN_EXPIRY_KEY, expiryString);
 
-      return data.access_token;
-    } catch (error) {
-      console.error('Failed to get care platform token:', error);
+      return tokenString;
+    } catch (error: any) {
+      console.error('Failed to get care token:', error);
       throw error;
     }
   }

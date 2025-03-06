@@ -1,17 +1,13 @@
 import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Pressable, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useState, useEffect } from 'react';
-import { carePlatformClient, type Conversation } from '../services/CarePlatformClient';
+import { careRequestService, type CareRequest } from '../services/CareRequestService';
 import { router } from 'expo-router';
 
 // Types
 interface SortingOptionsProps {
   activeSort: string;
   onSortChange: (sort: string) => void;
-}
-
-interface ConversationItemProps {
-  conversation: Conversation;
 }
 
 // Placeholder component for the search bar
@@ -54,41 +50,42 @@ const SortingOptions = ({ activeSort, onSortChange }: SortingOptionsProps) => (
 );
 
 // Conversation list item component
-const ConversationItem = ({ conversation }: ConversationItemProps) => (
-  <TouchableOpacity 
-    style={styles.conversationItem}
-    onPress={() => router.push(`/(chat)/${conversation.id}`)}
-  >
-    <View style={styles.avatarContainer}>
-      <View style={styles.avatar}>
-        <Ionicons name="person" size={24} color="#FFFFFF" />
-      </View>
-      {/* Online indicator removed as we don't have this in the API yet */}
-    </View>
-    <View style={styles.conversationContent}>
-      <View style={styles.conversationHeader}>
-        <Text style={styles.conversationName}>{conversation.provider.name}</Text>
-        <Text style={styles.conversationTime}>
-          {conversation.lastMessage?.timestamp || 'No messages'}
+const ConversationItem = ({ conversation }: { conversation: CareRequest }) => {
+  const timestamp = new Date(conversation.lastMessage.sentAt).toLocaleTimeString([], {
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true
+  });
+
+  return (
+    <TouchableOpacity
+      style={styles.conversationItem}
+      onPress={() => router.push(`/chat/${conversation.id}`)}
+    >
+      <View style={styles.conversationContent}>
+        <View style={styles.conversationHeader}>
+          <Text style={styles.conversationName}>
+            {conversation.providers[0]?.name || 'No Provider Assigned'}
+          </Text>
+          <Text style={styles.conversationTime}>{timestamp}</Text>
+        </View>
+        <Text style={styles.conversationRole}>
+          {conversation.providers[0]?.role || 'Pending Assignment'}
+        </Text>
+        <Text style={[
+          styles.conversationMessage,
+          conversation.patientUnreadMessages && styles.conversationMessageUnread
+        ]}>
+          {conversation.lastMessage.text}
         </Text>
       </View>
-      <Text style={styles.conversationRole}>{conversation.provider.role}</Text>
-      <Text 
-        style={[
-          styles.conversationMessage,
-          conversation.unread && styles.conversationMessageUnread
-        ]}
-        numberOfLines={1}
-      >
-        {conversation.lastMessage?.text || 'No messages yet'}
-      </Text>
-    </View>
-  </TouchableOpacity>
-);
+    </TouchableOpacity>
+  );
+};
 
 export default function MessagesScreen() {
   const [activeSort, setActiveSort] = useState('recent');
-  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [conversations, setConversations] = useState<CareRequest[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -100,8 +97,8 @@ export default function MessagesScreen() {
     try {
       setIsLoading(true);
       setError(null);
-      const data = await carePlatformClient.getConversations();
-      setConversations(data);
+      const data = await careRequestService.getCareRequests();
+      setConversations(data || []);
     } catch (err) {
       setError('Failed to load conversations. Please try again.');
       console.error('Error loading conversations:', err);
@@ -232,18 +229,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
     borderBottomColor: '#E5E5EA',
-  },
-  avatarContainer: {
-    position: 'relative',
-    marginRight: 12,
-  },
-  avatar: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    backgroundColor: '#8E8E93',
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   conversationContent: {
     flex: 1,
