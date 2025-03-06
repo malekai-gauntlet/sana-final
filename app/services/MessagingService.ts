@@ -26,7 +26,7 @@ export interface Message {
   };
   timestamp: string;
   attachments?: Attachment[];
-  replyTo?: string; // ID of the message this is replying to (for threaded messages)
+  replyTo?: string; // For threaded messages
   messageType?: 'text' | 'questionnaire' | 'referral';
 }
 
