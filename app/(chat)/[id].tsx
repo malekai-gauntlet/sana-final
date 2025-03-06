@@ -143,18 +143,35 @@ const MessageBubble = ({ message, onReply }: { message: Message, onReply?: (mess
 };
 
 export default function ChatScreen() {
-  const { id } = useLocalSearchParams();
+  const { id, isNewRequest } = useLocalSearchParams();
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState('');
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const scrollViewRef = useRef<ScrollView>(null);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [replyingTo, setReplyingTo] = useState<Message | null>(null);
 
   useEffect(() => {
-    loadMessages();
     requestPermissions();
-  }, []);
+    
+    // Only load messages if this is not a new care request
+    if (!isNewRequest) {
+      loadMessages();
+    } else {
+      // Show welcome message for new care requests
+      setMessages([{
+        id: 'welcome',
+        text: 'Thank you for your care request. A provider will respond to you shortly.',
+        author: {
+          id: 'system',
+          type: 'system',
+          name: 'System'
+        },
+        timestamp: new Date().toISOString(),
+        messageType: 'text'
+      }]);
+    }
+  }, [isNewRequest]);
 
   const requestPermissions = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();

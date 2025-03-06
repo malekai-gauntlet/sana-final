@@ -60,7 +60,13 @@ const CareOption = ({ option }: { option: CareOption }) => {
       const careRequest = await careRequestService.createCareRequest(option.type);
       if (careRequest) {
         setShowConsent(false);
-        router.push(`/(chat)/${careRequest.id}`);
+        router.push({
+          pathname: "/(chat)/[id]",
+          params: { 
+            id: careRequest.id,
+            isNewRequest: 'true'
+          }
+        });
       }
     } catch (error) {
       console.error('Failed to create care request:', error);

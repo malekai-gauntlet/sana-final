@@ -160,8 +160,8 @@ const MOCK_MESSAGES: { [key: string]: Message[] } = {
 };
 
 class CarePlatformClient {
-  private baseUrl = 'http://localhost:3000/patient_api';  // Keep for future use
-  private memberPortalUrl = 'http://localhost:3000/member_portal/api';
+  private baseUrl = 'http://localhost/patient_api';
+  private memberPortalUrl = 'http://localhost/member_portal/api';
 
   private static readonly CARE_TOKEN_KEY = 'care_platform_token';
   private static readonly CARE_TOKEN_EXPIRY_KEY = 'care_platform_token_expiry';
@@ -221,8 +221,57 @@ class CarePlatformClient {
   }
 
   // Get Care Platform token, refreshing if necessary
-  private async getCareToken(): Promise<string> {
-    return 'mock_care_token_12345'; // Mock token for now
+  async getCareToken(): Promise<string> {
+    try {
+      // Check if we have a stored token and it's not expired
+      const storedToken = await SecureStore.getItemAsync(CarePlatformClient.CARE_TOKEN_KEY);
+      const expiryTimestamp = await SecureStore.getItemAsync(CarePlatformClient.CARE_TOKEN_EXPIRY_KEY);
+      
+      if (storedToken && expiryTimestamp) {
+        const expiryTime = parseInt(expiryTimestamp, 10);
+        // Add 1-minute buffer to expiry check
+        if (Date.now() < expiryTime - 60000) {
+          return storedToken;
+        }
+      }
+
+      // Get a new token
+      const authToken = await authService.getPrimaryToken();
+      if (!authToken) {
+        throw new Error('No primary auth token available');
+      }
+
+      const response = await fetch(`${this.memberPortalUrl}/care_requests/get_token`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': authToken
+        }
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Failed to get care platform token response:', errorText);
+        throw new Error(`Failed to get care platform token: ${response.status}`);
+      }
+
+      const data: TokenResponse = await response.json();
+      
+      // Store the new token and expiry - ensure both are strings
+      await SecureStore.setItemAsync(CarePlatformClient.CARE_TOKEN_KEY, data.access_token.toString());
+      await SecureStore.setItemAsync(CarePlatformClient.CARE_TOKEN_EXPIRY_KEY, data.expires_at.toString());
+
+      return data.access_token;
+    } catch (error) {
+      console.error('Failed to get care platform token:', error);
+      throw error;
+    }
+  }
+
+  // Clear stored tokens (e.g., on logout)
+  async clearTokens(): Promise<void> {
+    await SecureStore.deleteItemAsync(CarePlatformClient.CARE_TOKEN_KEY);
+    await SecureStore.deleteItemAsync(CarePlatformClient.CARE_TOKEN_EXPIRY_KEY);
   }
 }
 
